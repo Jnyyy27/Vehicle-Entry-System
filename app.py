@@ -20,7 +20,7 @@ def login():
     return redirect(
         f"{COGNITO_DOMAIN}/login?response_type=code"
         f"&client_id={CLIENT_ID}"
-        f"&redirect_uri=http://localhost:5000/callback"
+        f"&redirect_uri=https://sherry-snowplow-chafe.ngrok-free.dev/callback"
         f"&scope=email+openid+phone"
     )
 
