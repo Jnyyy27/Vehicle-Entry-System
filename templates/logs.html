@@ -1,25 +1,510 @@
-<table border="1">
-    <tr>
-        <th>ID</th>
-        <th>Plate Number</th>
-        <th>Category</th>
-        <th>Status</th>
-        <th>Time</th>
-    </tr>
+<!DOCTYPE html>
+<html lang="en">
 
-    {% for log in logs %}
-    <tr>
-        <td>{{ log[0] }}</td>
-        <td>{{ log[1] }}</td>
-        <td>
-            {% if log[2] == 'Student' %}
-            🟢 Student
-            {% else %}
-            🔴 Visitor
-            {% endif %}
-        </td>
-        <td>{{ log[3] }}</td>
-        <td>{{ log[4] }}</td>
-    </tr>
-    {% endfor %}
-</table>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Entry Logs · USM Vehicle Entry System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #F4F6F8;
+            --surface: #FFFFFF;
+            --ink: #10182B;
+            --ink-soft: #5B6678;
+            --ink-faint: #8A93A3;
+            --navy: #1B3358;
+            --navy-deep: #102237;
+            --amber: #F2A93B;
+            --amber-ink: #6B4708;
+            --green-bg: #EAF7EF;
+            --green-ink: #1F7A4D;
+            --neutral-bg: #EEF1F4;
+            --line: #E2E6EB;
+            --radius: 14px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--ink);
+            font-family: 'Manrope', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .page {
+            max-width: 880px;
+            margin: 0 auto;
+            padding: 28px 24px 60px;
+        }
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-mark {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: var(--navy);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .brand-mark svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        .brand-text .eyebrow {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--ink-soft);
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .brand-text h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 19px;
+            font-weight: 700;
+            margin: 0;
+            color: var(--navy-deep);
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13.5px;
+            font-weight: 600;
+            color: var(--ink-soft);
+            text-decoration: none;
+            border: 1px solid var(--line);
+            background: var(--surface);
+            border-radius: 999px;
+            padding: 9px 16px;
+            transition: border-color 0.15s ease, color 0.15s ease;
+        }
+
+        .back-link:hover {
+            border-color: #C8CDD5;
+            color: var(--ink);
+        }
+
+        .back-link:focus-visible {
+            outline: 2px solid var(--amber);
+            outline-offset: 2px;
+        }
+
+        .back-link svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .intro {
+            margin-bottom: 22px;
+        }
+
+        .intro p {
+            margin: 4px 0 0;
+            font-size: 14px;
+            color: var(--ink-soft);
+        }
+
+        /* Toolbar: search + count */
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            position: relative;
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .search-box svg {
+            position: absolute;
+            left: 13px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            color: var(--ink-faint);
+            pointer-events: none;
+        }
+
+        .search-box input {
+            width: 100%;
+            font-family: 'Manrope', sans-serif;
+            font-size: 14px;
+            color: var(--ink);
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 10px 14px 10px 38px;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: var(--navy);
+            box-shadow: 0 0 0 3px rgba(27, 51, 88, 0.1);
+        }
+
+        .count-pill {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 12px;
+            color: var(--ink-soft);
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            padding: 7px 13px;
+            white-space: nowrap;
+        }
+
+        /* Table card */
+        .table-card {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+
+        .table-scroll {
+            max-height: 540px;
+            overflow-y: auto;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13.5px;
+        }
+
+        thead th {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            background: var(--surface);
+            text-align: left;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--ink-soft);
+            font-weight: 600;
+            padding: 13px 16px;
+            border-bottom: 1px solid var(--line);
+            white-space: nowrap;
+        }
+
+        tbody td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--line);
+            vertical-align: middle;
+        }
+
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        tbody tr:hover {
+            background: #FAFBFC;
+        }
+
+        .mono {
+            font-family: 'IBM Plex Mono', monospace;
+        }
+
+        .id-cell {
+            color: var(--ink-faint);
+            font-size: 12.5px;
+        }
+
+        .plate-cell {
+            font-weight: 600;
+            letter-spacing: 0.02em;
+        }
+
+        .time-cell {
+            color: var(--ink-soft);
+            white-space: nowrap;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 11.5px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            border-radius: 999px;
+            padding: 4px 11px;
+            white-space: nowrap;
+        }
+
+        .badge::before {
+            content: "";
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .badge.student {
+            background: var(--green-bg);
+            color: var(--green-ink);
+        }
+
+        .badge.student::before {
+            background: #2F9E68;
+        }
+
+        .badge.visitor {
+            background: #FFF3DC;
+            color: var(--amber-ink);
+        }
+
+        .badge.visitor::before {
+            background: var(--amber);
+        }
+
+        .badge.entry {
+            background: var(--green-bg);
+            color: var(--green-ink);
+        }
+
+        .badge.entry::before {
+            background: #2F9E68;
+        }
+
+        .badge.exit {
+            background: #FFF3DC;
+            color: var(--amber-ink);
+        }
+
+        .badge.exit::before {
+            background: var(--amber);
+        }
+
+        .badge.neutral {
+            background: var(--neutral-bg);
+            color: var(--ink-soft);
+        }
+
+        .badge.neutral::before {
+            background: var(--ink-faint);
+        }
+
+        /* Empty states */
+        .empty-state {
+            text-align: center;
+            padding: 56px 24px;
+            color: var(--ink-soft);
+        }
+
+        .empty-state svg {
+            width: 36px;
+            height: 36px;
+            color: var(--ink-faint);
+            margin-bottom: 12px;
+        }
+
+        .empty-state p {
+            margin: 0;
+            font-size: 14px;
+        }
+
+        .empty-state p.faint {
+            font-size: 12.5px;
+            color: var(--ink-faint);
+            margin-top: 4px;
+        }
+
+        #noResults {
+            display: none;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                transition: none !important;
+            }
+        }
+
+        @media (max-width: 560px) {
+
+            th:first-child,
+            td.id-cell {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="page">
+
+        <div class="topbar">
+            <div class="brand">
+                <div class="brand-mark">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M9 2h6a1 1 0 0 1 1 1v2H8V3a1 1 0 0 1 1-1Z" />
+                        <rect x="5" y="5" width="14" height="17" rx="2" />
+                        <line x1="9" y1="11" x2="15" y2="11" />
+                        <line x1="9" y1="15" x2="15" y2="15" />
+                    </svg>
+                </div>
+                <div class="brand-text">
+                    <span class="eyebrow">USM &middot; Campus Access</span>
+                    <h1>Entry Logs</h1>
+                </div>
+            </div>
+
+            <a class="back-link" href="/dashboard">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12" />
+                    <polyline points="12 19 5 12 12 5" />
+                </svg>
+                Dashboard
+            </a>
+        </div>
+
+        <div class="intro">
+            <p>Review gate entry and exit history for campus vehicles.</p>
+        </div>
+
+        {% if logs %}
+        <div class="toolbar">
+            <div class="search-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="7" />
+                    <line x1="21" y1="21" x2="16.5" y2="16.5" />
+                </svg>
+                <input type="text" id="logSearch" placeholder="Search by plate number..." oninput="filterLogs()">
+            </div>
+            <span class="count-pill" id="countPill">{{ logs|length }} entries</span>
+        </div>
+
+        <div class="table-card">
+            <div class="table-scroll">
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Plate Number</th>
+                                <th>Category</th>
+                                <th>Status</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logsBody">
+                            {% for log in logs %}
+                            <tr data-plate="{{ log[1]|lower }}">
+                                <td class="id-cell mono">{{ log[0] }}</td>
+                                <td class="plate-cell mono">{{ log[1] }}</td>
+                                <td>
+                                    {% if log[2] == 'Student' %}
+                                    <span class="badge student">Student</span>
+                                    {% else %}
+                                    <span class="badge visitor">Visitor</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if log[3] == 'Entry' %}
+                                    <span class="badge entry">Entry</span>
+                                    {% elif log[3] == 'Exit' %}
+                                    <span class="badge exit">Exit</span>
+                                    {% else %}
+                                    <span class="badge neutral">{{ log[3] }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="time-cell mono">{{ log[4] }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="empty-state" id="noResults">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="7" />
+                    <line x1="21" y1="21" x2="16.5" y2="16.5" />
+                </svg>
+                <p>No logs match that plate number.</p>
+            </div>
+        </div>
+
+        {% else %}
+        <div class="table-card">
+            <div class="empty-state">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <path d="M9 2h6a1 1 0 0 1 1 1v2H8V3a1 1 0 0 1 1-1Z" />
+                    <rect x="5" y="5" width="14" height="17" rx="2" />
+                    <line x1="9" y1="11" x2="15" y2="11" />
+                    <line x1="9" y1="15" x2="15" y2="15" />
+                </svg>
+                <p>No entries logged yet.</p>
+                <p class="faint">Gate activity will show up here once vehicles start passing through.</p>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+
+    <script>
+        function filterLogs() {
+            const query = document.getElementById('logSearch').value.trim().toLowerCase();
+            const rows = document.querySelectorAll('#logsBody tr');
+            let visibleCount = 0;
+
+            rows.forEach(row => {
+                const matches = row.dataset.plate.includes(query);
+                row.style.display = matches ? '' : 'none';
+                if (matches) visibleCount++;
+            });
+
+            document.getElementById('noResults').style.display = visibleCount === 0 ? 'block' : 'none';
+            document.getElementById('countPill').textContent =
+                query ? `${visibleCount} of ${rows.length} entries` : `${rows.length} entries`;
+        }
+    </script>
+</body>
+
+</html>
