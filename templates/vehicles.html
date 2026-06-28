@@ -1,34 +1,423 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
-    <title>Vehicle Registration</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Registration · USM Vehicle Entry System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #F4F6F8;
+            --surface: #FFFFFF;
+            --ink: #10182B;
+            --ink-soft: #5B6678;
+            --ink-faint: #8A93A3;
+            --navy: #1B3358;
+            --navy-deep: #102237;
+            --amber: #F2A93B;
+            --line: #E2E6EB;
+            --radius: 14px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--ink);
+            font-family: 'Manrope', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .page {
+            max-width: 640px;
+            margin: 0 auto;
+            padding: 28px 24px 60px;
+        }
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-mark {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: var(--navy);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .brand-mark svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        .brand-text .eyebrow {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--ink-soft);
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .brand-text h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 19px;
+            font-weight: 700;
+            margin: 0;
+            color: var(--navy-deep);
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13.5px;
+            font-weight: 600;
+            color: var(--ink-soft);
+            text-decoration: none;
+            border: 1px solid var(--line);
+            background: var(--surface);
+            border-radius: 999px;
+            padding: 9px 16px;
+            transition: border-color 0.15s ease, color 0.15s ease;
+        }
+
+        .back-link:hover {
+            border-color: #C8CDD5;
+            color: var(--ink);
+        }
+
+        .back-link:focus-visible {
+            outline: 2px solid var(--amber);
+            outline-offset: 2px;
+        }
+
+        .back-link svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .intro {
+            margin-bottom: 24px;
+        }
+
+        .intro p {
+            margin: 4px 0 0;
+            font-size: 14px;
+            color: var(--ink-soft);
+        }
+
+        /* Form card */
+        .form-card {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 28px;
+        }
+
+        .field {
+            margin-bottom: 20px;
+        }
+
+        .field label {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--ink);
+            margin-bottom: 7px;
+        }
+
+        .field label svg {
+            width: 15px;
+            height: 15px;
+            color: var(--ink-soft);
+            flex-shrink: 0;
+        }
+
+        .field input,
+        .field select {
+            width: 100%;
+            font-family: 'Manrope', sans-serif;
+            font-size: 14.5px;
+            color: var(--ink);
+            background: #FBFCFD;
+            border: 1px solid var(--line);
+            border-radius: 9px;
+            padding: 11px 13px;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .field input:focus,
+        .field select:focus {
+            outline: none;
+            border-color: var(--navy);
+            box-shadow: 0 0 0 3px rgba(27, 51, 88, 0.1);
+        }
+
+        .field select {
+            appearance: none;
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235B6678' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 16px;
+            padding-right: 36px;
+        }
+
+        .field .hint {
+            font-size: 12px;
+            color: var(--ink-faint);
+            margin-top: 5px;
+        }
+
+        .field.plate-field {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .field.plate-field .plate-input {
+            flex: 1;
+        }
+
+        /* Live plate preview — echoes the badge on the dashboard */
+        .plate-preview {
+            font-family: 'IBM Plex Mono', monospace;
+            background: #FFF8EA;
+            border: 1.5px solid var(--amber);
+            border-radius: 8px;
+            padding: 7px 14px;
+            text-align: center;
+            min-width: 110px;
+            margin-top: 26px;
+            flex-shrink: 0;
+        }
+
+        .plate-preview .plate-label {
+            font-size: 9px;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: #6B4708;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .plate-preview .plate-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--ink);
+            letter-spacing: 0.04em;
+        }
+
+        .plate-preview .plate-value.empty {
+            color: var(--ink-faint);
+            font-weight: 500;
+        }
+
+        .divider {
+            border: none;
+            border-top: 1px solid var(--line);
+            margin: 4px 0 22px;
+        }
+
+        .submit-note {
+            font-size: 12px;
+            color: var(--ink-faint);
+            margin: 0 0 16px;
+        }
+
+        .submit-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            background: var(--navy);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 13px 18px;
+            font-family: 'Manrope', sans-serif;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.15s ease, transform 0.15s ease;
+        }
+
+        .submit-btn:hover {
+            background: var(--navy-deep);
+            transform: translateY(-1px);
+        }
+
+        .submit-btn:focus-visible {
+            outline: 2px solid var(--amber);
+            outline-offset: 3px;
+        }
+
+        .submit-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                transition: none !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .field.plate-field {
+                flex-direction: column;
+            }
+
+            .plate-preview {
+                margin-top: 0;
+                min-width: 0;
+            }
+        }
+    </style>
 </head>
 
 <body>
+    <div class="page">
 
-    <h1>Vehicle Registration</h1>
+        <div class="topbar">
+            <div class="brand">
+                <div class="brand-mark">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path
+                            d="M5 17h14M5 17a2 2 0 1 0 4 0M15 17a2 2 0 1 0 4 0M5 17V11l1.6-4.4A2 2 0 0 1 8.5 5.3h7A2 2 0 0 1 17.4 6.6L19 11v6" />
+                    </svg>
+                </div>
+                <div class="brand-text">
+                    <span class="eyebrow">USM &middot; Campus Access</span>
+                    <h1>Vehicle Registration</h1>
+                </div>
+            </div>
 
-    <form method="POST">
+            <a class="back-link" href="/dashboard">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12" />
+                    <polyline points="12 19 5 12 12 5" />
+                </svg>
+                Dashboard
+            </a>
+        </div>
 
-        Student Name:
-        <input type="text" name="student_name"><br><br>
+        <div class="intro">
+            <p>Register a vehicle to grant it gate access on campus. All fields are required.</p>
+        </div>
 
-        Student ID:
-        <input type="text" name="student_id"><br><br>
+        <form class="form-card" method="POST">
 
-        Plate Number:
-        <input type="text" name="plate_number"><br><br>
+            <div class="field">
+                <label for="student_name">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="12" cy="8" r="4" />
+                        <path d="M4 21c0-4 4-6 8-6s8 2 8 6" />
+                    </svg>
+                    Student Name
+                </label>
+                <input type="text" id="student_name" name="student_name" placeholder="e.g. Aiman bin Rashid" required
+                    autocomplete="name">
+            </div>
 
-        Vehicle Type:
-        <input type="text" name="vehicle_type"><br><br>
+            <div class="field">
+                <label for="student_id">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <rect x="3" y="5" width="18" height="14" rx="2" />
+                        <circle cx="8.5" cy="12" r="2" />
+                        <line x1="13" y1="10" x2="18" y2="10" />
+                        <line x1="13" y1="14" x2="18" y2="14" />
+                    </svg>
+                    Student ID
+                </label>
+                <input type="text" id="student_id" name="student_id" placeholder="e.g. 156234" required
+                    autocomplete="off">
+            </div>
 
-        <button type="submit">
-            Register Vehicle
-        </button>
+            <hr class="divider">
 
-    </form>
+            <div class="field plate-field">
+                <div class="plate-input">
+                    <label for="plate_number">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="6" width="18" height="12" rx="2" />
+                            <line x1="7" y1="11" x2="17" y2="11" />
+                        </svg>
+                        Plate Number
+                    </label>
+                    <input type="text" id="plate_number" name="plate_number" placeholder="e.g. QKA 4521" required
+                        autocomplete="off"
+                        oninput="document.getElementById('platePreviewVal').textContent = this.value.toUpperCase() || '----'; document.getElementById('platePreviewVal').classList.toggle('empty', !this.value);">
+                    <p class="hint">Enter exactly as shown on the plate.</p>
+                </div>
+                <div class="plate-preview" aria-hidden="true">
+                    <span class="plate-label">Preview</span>
+                    <span class="plate-value empty" id="platePreviewVal">----</span>
+                </div>
+            </div>
 
+            <div class="field">
+                <label for="vehicle_type">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path
+                            d="M5 17h14M5 17a2 2 0 1 0 4 0M15 17a2 2 0 1 0 4 0M5 17V11l1.6-4.4A2 2 0 0 1 8.5 5.3h7A2 2 0 0 1 17.4 6.6L19 11v6" />
+                    </svg>
+                    Vehicle Type
+                </label>
+                <select id="vehicle_type" name="vehicle_type" required>
+                    <option value="" disabled selected>Select vehicle type</option>
+                    <option value="Car">Car</option>
+                    <option value="Motorcycle">Motorcycle</option>
+                    <option value="Van">Van</option>
+                    <option value="Pickup Truck">Pickup Truck</option>
+                    <option value="Bicycle">Bicycle</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+
+            <p class="submit-note">Your registration will be reviewed before gate access is activated.</p>
+
+            <button type="submit" class="submit-btn">
+                Register Vehicle
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                </svg>
+            </button>
+
+        </form>
+    </div>
 </body>
 
 </html>

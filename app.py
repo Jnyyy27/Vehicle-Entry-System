@@ -43,12 +43,23 @@ def login_required(f):
         try:
             user = verify_id_token(token)
 
-        except jwt.ExpiredSignatureError:
-            print("Token has expired")
-            session.clear()
-            return redirect("/login")
+            # IMPORTANT: rebuild session user every request
+            groups = user.get("cognito:groups", [])
+
+            if "Admin" in groups:
+                role = "Admin"
+            elif "SecurityGuard" in groups:
+                role = "SecurityGuard"
+            else:
+                role = "User"
+
+            session["user"] = {
+                "email": user["email"],
+                "sub": user["sub"],
+                "role": role
+            }
+
         except jwt.InvalidTokenError:
-            print("Invalid token")
             session.clear()
             return redirect("/login")
 
@@ -98,7 +109,7 @@ def login():
 def dashboard():
     return render_template(
         "dashboard.html",
-        user=session["user"]
+        user=session.get("user", {})
 )
 
 @app.route("/vehicles", methods=["GET", "POST"])
@@ -106,7 +117,7 @@ def dashboard():
 def vehicles():
 
     # Only Admin can access this page
-    if session["user"]["role"] != "Admin":
+    if session.get("user", {}).get("role") != "Admin":
         return render_template("403.html"), 403
 
     if request.method == "POST":
