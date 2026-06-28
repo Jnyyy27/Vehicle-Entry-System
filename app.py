@@ -20,6 +20,7 @@ COGNITO_DOMAIN = os.getenv("COGNITO_DOMAIN")
 CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 COGNITO_USER_POOL_ID = os.getenv("COGNITO_USER_POOL_ID")
+REDIRECT_URI = os.getenv("REDIRECT_URI")
 
 # Region is just the prefix of the user pool ID (e.g. "ap-southeast-1_AbCdEfGhI")
 COGNITO_REGION = COGNITO_USER_POOL_ID.split("_")[0]
@@ -88,7 +89,7 @@ def login():
     return redirect(
         f"{COGNITO_DOMAIN}/login?response_type=code"
         f"&client_id={CLIENT_ID}"
-        f"&redirect_uri=https://sherry-snowplow-chafe.ngrok-free.dev/callback"
+        f"&redirect_uri={REDIRECT_URI}"
         f"&scope=email+openid+phone"
     )
 
@@ -174,7 +175,7 @@ def callback():
         "grant_type": "authorization_code",
         "client_id": CLIENT_ID,
         "code": code,
-        "redirect_uri": "https://sherry-snowplow-chafe.ngrok-free.dev/callback"
+        "redirect_uri": REDIRECT_URI
     }
 
     response = requests.post(token_url, data=data, headers=headers)
