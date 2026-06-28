@@ -1,4 +1,5 @@
 import os
+from urllib import response
 import pymysql
 import requests
 import jwt
@@ -177,13 +178,21 @@ def callback():
     }
 
     response = requests.post(token_url, data=data, headers=headers)
+    print(response.status_code)
+    print(response.text)
     tokens = response.json()
 
+    print("TOKEN RESPONSE:")
+    print(tokens)
     id_token = tokens.get("id_token")
+    print("ID TOKEN:")
+    print(id_token)
+    print(type(id_token))
 
     try:
         # Verify JWT and get user information
         user = verify_id_token(id_token)
+        print(user)
 
         # Get Cognito Group
         groups = user.get("cognito:groups", [])
