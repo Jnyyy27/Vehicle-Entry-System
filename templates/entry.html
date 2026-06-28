@@ -593,37 +593,10 @@
                 </div>
             </div>
 
-            <p class="direction-label">Direction</p>
-            <div class="segmented">
-                <input type="radio" id="dir-entry" name="direction" value="entry" checked
-                    onchange="document.getElementById('submitLabel').textContent = 'Log Entry'">
-                <label for="dir-entry">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
-                        <polyline points="10 17 15 12 10 7" />
-                        <line x1="15" y1="12" x2="3" y2="12" />
-                    </svg>
-                    Entry
-                </label>
-
-                <input type="radio" id="dir-exit" name="direction" value="exit"
-                    onchange="document.getElementById('submitLabel').textContent = 'Log Exit'">
-                <label for="dir-exit">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                        <polyline points="16 17 21 12 16 7" />
-                        <line x1="21" y1="12" x2="9" y2="12" />
-                    </svg>
-                    Exit
-                </label>
-            </div>
-
             <p class="submit-note">Make sure the plate is correct before logging.</p>
 
             <button type="submit" class="submit-btn">
-                <span id="submitLabel">Log Entry</span>
+                <span>Log Vehicle</span>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"
                     stroke-linejoin="round">
                     <polyline points="20 6 9 17 4 12" />
