@@ -89,7 +89,31 @@ def verify_id_token(token):
         raise jwt.InvalidTokenError("Expected an ID token")
 
     return claims
+def get_vehicle_category(plate_number):
 
+    conn = pymysql.connect(
+        host=DB_HOST,
+        user=DB_USER,
+        password=DB_PASSWORD,
+        database=DB_NAME
+    )
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT * FROM vehicles
+        WHERE plate_number = %s
+    """, (plate_number,))
+
+    result = cursor.fetchone()
+
+    cursor.close()
+    conn.close()
+
+    if result:
+        return "Student"
+    else:
+        return "Visitor"
 
 @app.route("/")
 def home():
@@ -162,11 +186,65 @@ def vehicles():
 @login_required
 def logs():
 
-    if "user" not in session:
-        return redirect("/login")
+    conn = pymysql.connect(
+        host=DB_HOST,
+        user=DB_USER,
+        password=DB_PASSWORD,
+        database=DB_NAME
+    )
 
-    # Both Admin and Security Guard
-    return render_template("logs.html")
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT id, plate_number, vehicle_category, status, entry_time
+        FROM entry_logs
+        ORDER BY id DESC
+    """)
+
+    logs = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return render_template("logs.html", logs=logs)
+
+@app.route("/entry", methods=["GET", "POST"])
+@login_required
+def entry():
+
+    if request.method == "POST":
+        plate_number = request.form["plate_number"]
+
+        # classify Student or Visitor
+        vehicle_category = get_vehicle_category(plate_number)
+
+        conn = pymysql.connect(
+            host=DB_HOST,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            database=DB_NAME
+        )
+
+        cursor = conn.cursor()
+
+        sql = """
+        INSERT INTO entry_logs (plate_number, vehicle_category, status)
+        VALUES (%s, %s, %s)
+        """
+
+        cursor.execute(sql, (
+            plate_number,
+            vehicle_category,
+            "IN"
+        ))
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        return f"{vehicle_category} vehicle logged successfully!"
+
+    return render_template("entry.html")
 
 @app.route("/callback")
 def callback():
