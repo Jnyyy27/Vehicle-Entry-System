@@ -178,7 +178,13 @@ def vehicles():
         cursor.close()
         conn.close()
 
-        return "Vehicle Registered Successfully!"
+        # Return HTML with JavaScript alert that shows popup and stays on page
+        return """
+        <script>
+            alert('Vehicle Registered Successfully!');
+            window.history.back();
+        </script>
+        """
 
     return render_template("vehicles.html")
 
@@ -242,7 +248,13 @@ def entry():
         cursor.close()
         conn.close()
 
-        return f"{vehicle_category} vehicle logged successfully!"
+        # Return HTML with JavaScript alert that shows popup and stays on page
+        return f"""
+        <script>
+            alert('{vehicle_category} vehicle logged successfully!');
+            window.history.back();
+        </script>
+        """
 
     return render_template("entry.html")
 
