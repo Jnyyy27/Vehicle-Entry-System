@@ -42,7 +42,7 @@ def login_required(f):
 
         try:
             user = verify_id_token(token)
-            
+
         except jwt.ExpiredSignatureError:
             print("Token has expired")
             session.clear()
