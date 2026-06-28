@@ -217,7 +217,7 @@ def entry():
     if request.method == "POST":
         plate_number = request.form["plate_number"]
 
-        # classify Student or Visitor
+        # Student or Visitor
         vehicle_category = get_vehicle_category(plate_number)
 
         conn = pymysql.connect(
@@ -229,22 +229,45 @@ def entry():
 
         cursor = conn.cursor()
 
-        sql = """
-        INSERT INTO entry_logs (plate_number, vehicle_category, status)
-        VALUES (%s, %s, %s)
-        """
+        # Check the latest status
+        cursor.execute("""
+            SELECT status
+            FROM entry_logs
+            WHERE plate_number = %s
+            ORDER BY entry_time DESC
+            LIMIT 1
+        """, (plate_number,))
 
-        cursor.execute(sql, (
+        last_log = cursor.fetchone()
+
+        # Determine IN / OUT
+        if last_log is None:
+            status = "IN"
+        elif last_log[0] == "IN":
+            status = "OUT"
+        else:
+            status = "IN"
+
+        # Save the new log
+        cursor.execute("""
+            INSERT INTO entry_logs
+            (plate_number, vehicle_category, status)
+            VALUES (%s, %s, %s)
+        """, (
             plate_number,
             vehicle_category,
-            "IN"
+            status
         ))
 
         conn.commit()
         cursor.close()
         conn.close()
 
-        flash(f"{vehicle_category} vehicle {plate_number} logged successfully!", "success")
+        flash(
+            f"{vehicle_category} vehicle {plate_number} recorded as {status}.",
+            "success"
+        )
+
         return redirect(url_for("entry"))
 
     return render_template("entry.html")
