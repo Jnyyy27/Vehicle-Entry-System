@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In · USM Vehicle Entry System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #F4F6F8;
+            --surface: #FFFFFF;
+            --ink: #10182B;
+            --ink-soft: #5B6678;
+            --navy: #1B3358;
+            --navy-deep: #102237;
+            --amber: #F2A93B;
+            --line: #E2E6EB;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: var(--bg);
+            color: var(--ink);
+            font-family: 'Manrope', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .card {
+            width: 100%;
+            max-width: 380px;
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 24px 48px -24px rgba(16, 24, 43, 0.18);
+        }
+
+        /* Barrier-gate stripe — the signature element, used once, sparingly */
+        .barrier {
+            height: 7px;
+            background: repeating-linear-gradient(-45deg,
+                    var(--navy) 0 14px,
+                    var(--amber) 14px 28px);
+        }
+
+        .card-body {
+            padding: 36px 32px 32px;
+            text-align: center;
+        }
+
+        .brand-mark {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: var(--navy);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 18px;
+        }
+
+        .brand-mark svg {
+            width: 26px;
+            height: 26px;
+        }
+
+        .eyebrow {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--ink-soft);
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--navy-deep);
+            margin: 0 0 10px;
+        }
+
+        .sub {
+            font-size: 14px;
+            line-height: 1.5;
+            color: var(--ink-soft);
+            margin: 0 0 28px;
+        }
+
+        .signin-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            background: var(--navy);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 13px 18px;
+            font-family: 'Manrope', sans-serif;
+            font-size: 15px;
+            font-weight: 700;
+            text-decoration: none;
+            transition: background 0.15s ease, transform 0.15s ease;
+        }
+
+        .signin-btn:hover {
+            background: var(--navy-deep);
+            transform: translateY(-1px);
+        }
+
+        .signin-btn:focus-visible {
+            outline: 2px solid var(--amber);
+            outline-offset: 3px;
+        }
+
+        .signin-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .secured-by {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            margin-top: 20px;
+            font-size: 12px;
+            color: var(--ink-soft);
+        }
+
+        .secured-by svg {
+            width: 13px;
+            height: 13px;
+            flex-shrink: 0;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                transition: none !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card">
+        <div class="barrier"></div>
+        <div class="card-body">
+            <div class="brand-mark">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <path
+                        d="M5 17h14M5 17a2 2 0 1 0 4 0M15 17a2 2 0 1 0 4 0M5 17V11l1.6-4.4A2 2 0 0 1 8.5 5.3h7A2 2 0 0 1 17.4 6.6L19 11v6" />
+                </svg>
+            </div>
+
+            <span class="eyebrow">USM &middot; Campus Access</span>
+            <h1>Vehicle Entry System</h1>
+            <p class="sub">Sign in with your campus account to register vehicles and view entry logs.</p>
+
+            <a class="signin-btn" href="/login">
+                Sign in to continue
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                    <polyline points="12 5 19 12 12 19" />
+                </svg>
+            </a>
+
+            <p class="secured-by">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <rect x="5" y="11" width="14" height="9" rx="2" />
+                    <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+                </svg>
+                Secured by AWS Cognito
+            </p>
+        </div>
+    </div>
+</body>
+
+</html>
