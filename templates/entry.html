@@ -1,21 +1,653 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
-    <title>Vehicle Entry</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Entry · USM Vehicle Entry System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #F4F6F8;
+            --surface: #FFFFFF;
+            --ink: #10182B;
+            --ink-soft: #5B6678;
+            --ink-faint: #8A93A3;
+            --navy: #1B3358;
+            --navy-deep: #102237;
+            --amber: #F2A93B;
+            --amber-ink: #6B4708;
+            --green: #2F9E68;
+            --green-bg: #EAF7EF;
+            --green-ink: #1F7A4D;
+            --line: #E2E6EB;
+            --radius: 14px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--ink);
+            font-family: 'Manrope', sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .page {
+            max-width: 560px;
+            margin: 0 auto;
+            padding: 28px 24px 60px;
+        }
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-mark {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: var(--navy);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .brand-mark svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        .brand-text .eyebrow {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--ink-soft);
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .brand-text h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 19px;
+            font-weight: 700;
+            margin: 0;
+            color: var(--navy-deep);
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13.5px;
+            font-weight: 600;
+            color: var(--ink-soft);
+            text-decoration: none;
+            border: 1px solid var(--line);
+            background: var(--surface);
+            border-radius: 999px;
+            padding: 9px 16px;
+            transition: border-color 0.15s ease, color 0.15s ease;
+        }
+
+        .back-link:hover {
+            border-color: #C8CDD5;
+            color: var(--ink);
+        }
+
+        .back-link:focus-visible {
+            outline: 2px solid var(--amber);
+            outline-offset: 2px;
+        }
+
+        .back-link svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .intro {
+            margin-bottom: 24px;
+        }
+
+        .intro p {
+            margin: 4px 0 0;
+            font-size: 14px;
+            color: var(--ink-soft);
+        }
+
+        /* Form card */
+        .form-card {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 28px;
+            margin-bottom: 20px;
+        }
+
+        /* Hero plate field — the primary, fast-entry control on this page */
+        .plate-field {
+            text-align: center;
+            margin-bottom: 22px;
+        }
+
+        .plate-field label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--ink);
+            margin-bottom: 10px;
+        }
+
+        .plate-field label svg {
+            width: 15px;
+            height: 15px;
+            color: var(--ink-soft);
+        }
+
+        .plate-field input {
+            width: 100%;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 26px;
+            font-weight: 600;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--ink);
+            background: #FBFCFD;
+            border: 1.5px solid var(--line);
+            border-radius: 10px;
+            padding: 16px 14px;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .plate-field input::placeholder {
+            font-weight: 500;
+            color: var(--ink-faint);
+            letter-spacing: 0.04em;
+        }
+
+        .plate-field input:focus {
+            outline: none;
+            border-color: var(--navy);
+            box-shadow: 0 0 0 3px rgba(27, 51, 88, 0.1);
+        }
+
+        .plate-preview {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'IBM Plex Mono', monospace;
+            background: #FFF8EA;
+            border: 1.5px solid var(--amber);
+            border-radius: 8px;
+            padding: 6px 14px;
+            margin-top: 14px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--ink);
+        }
+
+        .plate-preview.empty {
+            border-color: var(--line);
+            background: #FAFBFC;
+            color: var(--ink-faint);
+            font-weight: 500;
+        }
+
+        .plate-preview .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--amber);
+            flex-shrink: 0;
+        }
+
+        .plate-preview.empty .dot {
+            background: var(--ink-faint);
+        }
+
+        /* Direction segmented control */
+        .direction-label {
+            text-align: center;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--ink);
+            margin-bottom: 10px;
+        }
+
+        .segmented {
+            display: flex;
+            gap: 8px;
+            background: #EEF1F4;
+            border-radius: 10px;
+            padding: 5px;
+            margin-bottom: 22px;
+        }
+
+        .segmented input {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .segmented label {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            padding: 11px 0;
+            border-radius: 7px;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--ink-soft);
+            cursor: pointer;
+            transition: background 0.15s ease, color 0.15s ease;
+        }
+
+        .segmented label svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .segmented input:checked+label {
+            background: var(--navy);
+            color: #fff;
+        }
+
+        .segmented input:focus-visible+label {
+            outline: 2px solid var(--amber);
+            outline-offset: 2px;
+        }
+
+        .submit-note {
+            font-size: 12px;
+            color: var(--ink-faint);
+            text-align: center;
+            margin: 0 0 16px;
+        }
+
+        .submit-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            background: var(--navy);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 14px 18px;
+            font-family: 'Manrope', sans-serif;
+            font-size: 15.5px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.15s ease, transform 0.15s ease;
+        }
+
+        .submit-btn:hover {
+            background: var(--navy-deep);
+            transform: translateY(-1px);
+        }
+
+        .submit-btn:focus-visible {
+            outline: 2px solid var(--amber);
+            outline-offset: 3px;
+        }
+
+        .submit-btn svg {
+            width: 17px;
+            height: 17px;
+        }
+
+        /* Recent activity (optional — only renders if recent_entries is passed) */
+        .activity-card {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 20px 22px;
+        }
+
+        .section-label {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--ink-soft);
+            margin: 0 0 14px 0;
+        }
+
+        .activity-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 10px 0;
+            border-top: 1px solid var(--line);
+        }
+
+        .activity-row:first-of-type {
+            border-top: none;
+            padding-top: 0;
+        }
+
+        .activity-plate {
+            font-family: 'IBM Plex Mono', monospace;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .activity-meta {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .badge {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            border-radius: 999px;
+            padding: 3px 10px;
+        }
+
+        .badge.entry {
+            background: var(--green-bg);
+            color: var(--green-ink);
+        }
+
+        .badge.exit {
+            background: #FFF3DC;
+            color: var(--amber-ink);
+        }
+
+        .activity-time {
+            font-size: 12px;
+            color: var(--ink-faint);
+            white-space: nowrap;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                transition: none !important;
+            }
+        }
+
+        /* Toast notification */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+            max-width: 420px;
+            padding: 0 16px;
+        }
+
+        .toast {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-left: 4px solid var(--green);
+            border-radius: 12px;
+            padding: 14px 12px 14px 16px;
+            box-shadow: 0 12px 32px -12px rgba(16, 24, 43, 0.25);
+            font-size: 14px;
+            animation: toast-in 0.25s ease;
+        }
+
+        .toast.error {
+            border-left-color: #C0392B;
+        }
+
+        .toast-icon {
+            flex-shrink: 0;
+            width: 18px;
+            height: 18px;
+            margin-top: 1px;
+            color: var(--green);
+        }
+
+        .toast.error .toast-icon {
+            color: #C0392B;
+        }
+
+        .toast-msg {
+            flex: 1;
+            color: var(--ink);
+            font-weight: 600;
+            line-height: 1.4;
+        }
+
+        .toast-close {
+            background: none;
+            border: none;
+            padding: 3px;
+            cursor: pointer;
+            color: var(--ink-faint);
+            flex-shrink: 0;
+            border-radius: 6px;
+            display: flex;
+        }
+
+        .toast-close:hover {
+            color: var(--ink-soft);
+            background: #F1F3F5;
+        }
+
+        .toast-close svg {
+            width: 14px;
+            height: 14px;
+            display: block;
+        }
+
+        @keyframes toast-in {
+            from {
+                opacity: 0;
+                transform: translateY(-8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .toast {
+                animation: none;
+            }
+        }
+    </style>
 </head>
 
 <body>
 
-    <h2>Vehicle Entry System (Security)</h2>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="true">
+        {% for category, message in messages %}
+        <div class="toast {{ 'error' if category == 'error' else '' }}" role="status">
+            <span class="toast-icon">
+                {% if category == 'error' %}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+                {% else %}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                </svg>
+                {% endif %}
+            </span>
+            <span class="toast-msg">{{ message }}</span>
+            <button class="toast-close" onclick="this.closest('.toast').remove()" aria-label="Dismiss">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+    <script>
+        setTimeout(() => {
+            document.querySelectorAll('.toast').forEach(t => {
+                t.style.transition = 'opacity 0.25s ease';
+                t.style.opacity = '0';
+                setTimeout(() => t.remove(), 250);
+            });
+        }, 4000);
+    </script>
+    {% endif %}
+    {% endwith %}
 
-    <form method="POST">
-        <label>Plate Number:</label>
-        <input type="text" name="plate_number" required>
+    <div class="page">
 
-        <button type="submit">Log Entry</button>
-    </form>
+        <div class="topbar">
+            <div class="brand">
+                <div class="brand-mark">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M3 7V5a2 2 0 0 1 2-2h2" />
+                        <path d="M17 3h2a2 2 0 0 1 2 2v2" />
+                        <path d="M21 17v2a2 2 0 0 1-2 2h-2" />
+                        <path d="M7 21H5a2 2 0 0 1-2-2v-2" />
+                    </svg>
+                </div>
+                <div class="brand-text">
+                    <span class="eyebrow">USM &middot; Campus Access</span>
+                    <h1>Vehicle Entry</h1>
+                </div>
+            </div>
 
+            <a class="back-link" href="/dashboard">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12" />
+                    <polyline points="12 19 5 12 12 5" />
+                </svg>
+                Dashboard
+            </a>
+        </div>
+
+        <div class="intro">
+            <p>Scan or type the plate number to log a vehicle at the gate.</p>
+        </div>
+
+        <form class="form-card" method="POST" action="/entry">
+
+            <div class="plate-field">
+                <label for="plate_number">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <rect x="3" y="6" width="18" height="12" rx="2" />
+                        <line x1="7" y1="11" x2="17" y2="11" />
+                    </svg>
+                    Plate Number
+                </label>
+                <input type="text" id="plate_number" name="plate_number" placeholder="QKA 4521" required autofocus
+                    autocomplete="off" oninput="
+                        const v = this.value.trim();
+                        const p = document.getElementById('platePreview');
+                        document.getElementById('platePreviewVal').textContent = v.toUpperCase() || 'Waiting for plate number';
+                        p.classList.toggle('empty', !v);
+                    ">
+                <div class="plate-preview empty" id="platePreview">
+                    <span class="dot"></span>
+                    <span id="platePreviewVal">Waiting for plate number</span>
+                </div>
+            </div>
+
+            <p class="direction-label">Direction</p>
+            <div class="segmented">
+                <input type="radio" id="dir-entry" name="direction" value="entry" checked
+                    onchange="document.getElementById('submitLabel').textContent = 'Log Entry'">
+                <label for="dir-entry">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                        <polyline points="10 17 15 12 10 7" />
+                        <line x1="15" y1="12" x2="3" y2="12" />
+                    </svg>
+                    Entry
+                </label>
+
+                <input type="radio" id="dir-exit" name="direction" value="exit"
+                    onchange="document.getElementById('submitLabel').textContent = 'Log Exit'">
+                <label for="dir-exit">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                        <polyline points="16 17 21 12 16 7" />
+                        <line x1="21" y1="12" x2="9" y2="12" />
+                    </svg>
+                    Exit
+                </label>
+            </div>
+
+            <p class="submit-note">Make sure the plate is correct before logging.</p>
+
+            <button type="submit" class="submit-btn">
+                <span id="submitLabel">Log Entry</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                </svg>
+            </button>
+
+        </form>
+
+        {% if recent_entries %}
+        <div class="activity-card">
+            <p class="section-label">Recent activity</p>
+            {% for entry in recent_entries %}
+            <div class="activity-row">
+                <span class="activity-plate">{{ entry.plate_number }}</span>
+                <div class="activity-meta">
+                    <span class="badge {{ entry.direction }}">{{ entry.direction }}</span>
+                    <span class="activity-time">{{ entry.logged_at }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+    </div>
 </body>
 
 </html>

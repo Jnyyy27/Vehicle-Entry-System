@@ -298,10 +298,146 @@
                 min-width: 0;
             }
         }
+
+        /* Toast notification */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+            max-width: 420px;
+            padding: 0 16px;
+        }
+
+        .toast {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-left: 4px solid #2F9E68;
+            border-radius: 12px;
+            padding: 14px 12px 14px 16px;
+            box-shadow: 0 12px 32px -12px rgba(16, 24, 43, 0.25);
+            font-size: 14px;
+            animation: toast-in 0.25s ease;
+        }
+
+        .toast.error {
+            border-left-color: #C0392B;
+        }
+
+        .toast-icon {
+            flex-shrink: 0;
+            width: 18px;
+            height: 18px;
+            margin-top: 1px;
+            color: #2F9E68;
+        }
+
+        .toast.error .toast-icon {
+            color: #C0392B;
+        }
+
+        .toast-msg {
+            flex: 1;
+            color: var(--ink);
+            font-weight: 600;
+            line-height: 1.4;
+        }
+
+        .toast-close {
+            background: none;
+            border: none;
+            padding: 3px;
+            cursor: pointer;
+            color: var(--ink-faint);
+            flex-shrink: 0;
+            border-radius: 6px;
+            display: flex;
+        }
+
+        .toast-close:hover {
+            color: var(--ink-soft);
+            background: #F1F3F5;
+        }
+
+        .toast-close svg {
+            width: 14px;
+            height: 14px;
+            display: block;
+        }
+
+        @keyframes toast-in {
+            from {
+                opacity: 0;
+                transform: translateY(-8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .toast {
+                animation: none;
+            }
+        }
     </style>
 </head>
 
 <body>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="true">
+        {% for category, message in messages %}
+        <div class="toast {{ 'error' if category == 'error' else '' }}" role="status">
+            <span class="toast-icon">
+                {% if category == 'error' %}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+                {% else %}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                </svg>
+                {% endif %}
+            </span>
+            <span class="toast-msg">{{ message }}</span>
+            <button class="toast-close" onclick="this.closest('.toast').remove()" aria-label="Dismiss">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+    <script>
+        setTimeout(() => {
+            document.querySelectorAll('.toast').forEach(t => {
+                t.style.transition = 'opacity 0.25s ease';
+                t.style.opacity = '0';
+                setTimeout(() => t.remove(), 250);
+            });
+        }, 4000);
+    </script>
+    {% endif %}
+    {% endwith %}
+
     <div class="page">
 
         <div class="topbar">

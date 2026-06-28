@@ -8,7 +8,7 @@ from functools import wraps
 from jwt import PyJWKClient
 from dotenv import load_dotenv
 from config import DB_HOST, DB_USER, DB_PASSWORD, DB_NAME
-from flask import Flask, request, redirect, render_template, session
+from flask import Flask, request, redirect, render_template, session, flash, url_for
 
 load_dotenv()
 
@@ -89,6 +89,7 @@ def verify_id_token(token):
         raise jwt.InvalidTokenError("Expected an ID token")
 
     return claims
+
 def get_vehicle_category(plate_number):
 
     conn = pymysql.connect(
@@ -178,13 +179,8 @@ def vehicles():
         cursor.close()
         conn.close()
 
-        # Return HTML with JavaScript alert that shows popup and stays on page
-        return """
-        <script>
-            alert('Vehicle Registered Successfully!');
-            window.history.back();
-        </script>
-        """
+        flash(f"Vehicle {plate_number} registered successfully!", "success")
+        return redirect(url_for("vehicles"))
 
     return render_template("vehicles.html")
 
@@ -248,13 +244,8 @@ def entry():
         cursor.close()
         conn.close()
 
-        # Return HTML with JavaScript alert that shows popup and stays on page
-        return f"""
-        <script>
-            alert('{vehicle_category} vehicle logged successfully!');
-            window.history.back();
-        </script>
-        """
+        flash(f"{vehicle_category} vehicle {plate_number} logged successfully!", "success")
+        return redirect(url_for("entry"))
 
     return render_template("entry.html")
 
