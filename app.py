@@ -1,20 +1,43 @@
 import os
+import uuid
+import boto3
+from botocore.exceptions import ClientError
 from urllib import response
 import pymysql
 import requests
 import jwt
 import base64
+import cv2
+import numpy as np
 from functools import wraps
 from jwt import PyJWKClient
 from dotenv import load_dotenv
 from config import DB_HOST, DB_USER, DB_PASSWORD, DB_NAME
 from flask import Flask, request, redirect, render_template, session, flash, url_for
+from ultralytics import YOLO
+from paddleocr import PaddleOCR
 
 load_dotenv()
+
+plate_model = YOLO("models/license_plate_detector.pt")
+
+ocr = PaddleOCR(
+    use_angle_cls=True,
+    lang="en"
+)
 
 app = Flask(__name__)
 
 app.secret_key = os.getenv("SECRET_KEY")
+
+# Limit upload size to 10 MB
+app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024
+
+# AWS S3 Configuration
+S3_BUCKET   = os.getenv("S3_BUCKET")
+S3_REGION   = os.getenv("S3_REGION", "ap-southeast-1")
+
+s3_client = boto3.client("s3", region_name=S3_REGION)
 
 COGNITO_DOMAIN = os.getenv("COGNITO_DOMAIN")
 CLIENT_ID = os.getenv("CLIENT_ID")
@@ -89,6 +112,84 @@ def verify_id_token(token):
         raise jwt.InvalidTokenError("Expected an ID token")
 
     return claims
+
+ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
+
+
+def upload_to_s3(local_path, s3_key):
+    """
+    Upload a local file to S3.  Returns the public HTTPS URL, or None if the
+    bucket name is not configured / the upload fails.
+    """
+    if not S3_BUCKET:
+        return None
+    try:
+        s3_client.upload_file(
+            local_path,
+            S3_BUCKET,
+            s3_key,
+            ExtraArgs={"ContentType": "image/jpeg"}
+        )
+        return f"https://{S3_BUCKET}.s3.{S3_REGION}.amazonaws.com/{s3_key}"
+    except ClientError as exc:
+        print(f"[S3] Upload failed for {s3_key}: {exc}")
+        return None
+
+
+def detect_plate(image_path):
+    """
+    Detect a license plate in an image using YOLO, then read its text with
+    PaddleOCR.  Returns the plate string in upper-case, or None.
+    """
+    results = plate_model(image_path, verbose=False)
+
+    if not results or len(results[0].boxes) == 0:
+        return None
+
+    boxes = results[0].boxes
+
+    # Pick the highest-confidence detection
+    best_idx = int(boxes.conf.argmax())
+    x1, y1, x2, y2 = map(int, boxes.xyxy[best_idx].tolist())
+
+    # Crop the plate region with a small padding border
+    img = cv2.imread(image_path)
+    if img is None:
+        return None
+
+    h, w = img.shape[:2]
+    pad = 8
+    x1, y1 = max(0, x1 - pad), max(0, y1 - pad)
+    x2, y2 = min(w, x2 + pad), min(h, y2 + pad)
+    cropped = img[y1:y2, x1:x2]
+
+    # Persist the cropped plate for auditing
+    crop_name = f"{uuid.uuid4().hex}.jpg"
+    crop_path = os.path.join("cropped", crop_name)
+    cv2.imwrite(crop_path, cropped)
+
+    # Upload cropped plate to S3 (non-blocking — failures are logged, not raised)
+    upload_to_s3(crop_path, f"cropped/{crop_name}")
+
+    # Run OCR on the cropped region
+    ocr_result = ocr.ocr(crop_path, cls=True)
+
+    if not ocr_result or not ocr_result[0]:
+        return None
+
+    # Collect text lines with acceptable confidence
+    texts = [
+        line[1][0]
+        for line in ocr_result[0]
+        if line[1][1] > 0.3
+    ]
+
+    # Fall back to all lines if nothing passed the threshold
+    if not texts:
+        texts = [line[1][0] for line in ocr_result[0]]
+
+    plate_text = " ".join(texts).upper().strip()
+    return plate_text if plate_text else None
 
 def get_vehicle_category(plate_number):
 
@@ -271,6 +372,42 @@ def entry():
         return redirect(url_for("entry"))
 
     return render_template("entry.html")
+
+@app.route("/scan-plate", methods=["POST"])
+@login_required
+def scan_plate():
+    """Accept an image upload, run YOLO + PaddleOCR, return detected plate."""
+    if "image" not in request.files:
+        return {"error": "No image provided"}, 400
+
+    file = request.files["image"]
+
+    if not file or file.filename == "":
+        return {"error": "No file selected"}, 400
+
+    if file.content_type not in ALLOWED_IMAGE_TYPES:
+        return {"error": "Invalid file type. Use JPEG, PNG or WebP."}, 400
+
+    # Save with a random name to avoid collisions / path traversal
+    filename = f"{uuid.uuid4().hex}.jpg"
+    filepath = os.path.join("upload", filename)
+    file.save(filepath)
+
+    # Upload original photo to S3
+    s3_original_url = upload_to_s3(filepath, f"upload/{filename}")
+
+    try:
+        plate_text = detect_plate(filepath)
+    except Exception as exc:
+        return {"error": f"Detection error: {exc}"}, 500
+
+    if not plate_text:
+        return {"error": "No license plate detected in the image."}, 422
+
+    result = {"plate_number": plate_text}
+    if s3_original_url:
+        result["s3_url"] = s3_original_url
+    return result
 
 @app.route("/callback")
 def callback():

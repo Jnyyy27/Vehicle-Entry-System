@@ -397,6 +397,156 @@
             }
         }
 
+        /* ── Camera / scan section ─────────────────────────────────────── */
+        .scan-section {
+            margin-bottom: 22px;
+        }
+
+        .scan-label {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--ink);
+            margin-bottom: 10px;
+        }
+
+        .scan-label svg {
+            width: 15px;
+            height: 15px;
+            color: var(--ink-soft);
+        }
+
+        .scan-upload-area {
+            position: relative;
+            border: 1.5px dashed var(--line);
+            border-radius: 10px;
+            background: #FAFBFC;
+            padding: 20px 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.15s ease, background 0.15s ease;
+        }
+
+        .scan-upload-area:hover,
+        .scan-upload-area.has-file {
+            border-color: var(--navy);
+            background: #F6F8FA;
+        }
+
+        .scan-upload-area input[type="file"] {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .scan-upload-hint {
+            font-size: 13px;
+            color: var(--ink-faint);
+            pointer-events: none;
+        }
+
+        .scan-upload-hint strong {
+            color: var(--navy);
+        }
+
+        .scan-preview-wrap {
+            display: none;
+            margin-top: 10px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--line);
+            max-height: 200px;
+        }
+
+        .scan-preview-wrap img {
+            width: 100%;
+            height: 200px;
+            object-fit: contain;
+            background: #F0F2F4;
+            display: block;
+        }
+
+        .scan-detect-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            width: 100%;
+            margin-top: 10px;
+            background: #EEF1F4;
+            color: var(--ink);
+            border: 1.5px solid var(--line);
+            border-radius: 9px;
+            padding: 11px 16px;
+            font-family: 'Manrope', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.15s ease, border-color 0.15s ease;
+        }
+
+        .scan-detect-btn:hover:not(:disabled) {
+            background: #E2E6EB;
+            border-color: #C8CDD5;
+        }
+
+        .scan-detect-btn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .scan-detect-btn svg {
+            width: 15px;
+            height: 15px;
+        }
+
+        .scan-result-msg {
+            display: none;
+            margin-top: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 9px 12px;
+            border-radius: 8px;
+            border: 1px solid;
+        }
+
+        .scan-result-msg.ok {
+            background: var(--green-bg);
+            border-color: #A7DFC0;
+            color: var(--green-ink);
+        }
+
+        .scan-result-msg.err {
+            background: #FFF0EE;
+            border-color: #F5C0BA;
+            color: #9B2414;
+        }
+
+        .scan-divider {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 20px 0;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--ink-faint);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .scan-divider::before,
+        .scan-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--line);
+        }
+
         /* Toast notification */
         .toast-container {
             position: fixed;
@@ -571,6 +721,45 @@
 
         <form class="form-card" method="POST" action="/entry">
 
+            <!-- ── Camera / image scan ───────────────────────────── -->
+            <div class="scan-section">
+                <div class="scan-label">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                        <circle cx="12" cy="13" r="4"/>
+                    </svg>
+                    Scan Plate from Photo
+                </div>
+
+                <div class="scan-upload-area" id="scanUploadArea">
+                    <input type="file" id="scanInput" accept="image/jpeg,image/png,image/webp"
+                        capture="environment" aria-label="Upload vehicle photo">
+                    <p class="scan-upload-hint">
+                        <strong>Tap to take a photo</strong> or choose from gallery<br>
+                        <span style="font-size:11px;">JPEG · PNG · WebP — max 10 MB</span>
+                    </p>
+                </div>
+
+                <div class="scan-preview-wrap" id="scanPreviewWrap">
+                    <img id="scanPreviewImg" src="" alt="Uploaded photo preview">
+                </div>
+
+                <button type="button" class="scan-detect-btn" id="scanDetectBtn" disabled>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"/>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    <span id="scanDetectLabel">Detect Plate</span>
+                </button>
+
+                <div class="scan-result-msg" id="scanResultMsg"></div>
+            </div>
+
+            <div class="scan-divider">or type manually</div>
+
+            <!-- ── Manual plate entry ────────────────────────────── -->
             <div class="plate-field">
                 <label for="plate_number">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
@@ -621,6 +810,75 @@
         {% endif %}
 
     </div>
+    <script>
+        // ── Scan plate via YOLO + PaddleOCR ──────────────────────────────
+        (function () {
+            const scanInput      = document.getElementById('scanInput');
+            const scanUploadArea = document.getElementById('scanUploadArea');
+            const scanPreviewWrap= document.getElementById('scanPreviewWrap');
+            const scanPreviewImg = document.getElementById('scanPreviewImg');
+            const scanDetectBtn  = document.getElementById('scanDetectBtn');
+            const scanDetectLabel= document.getElementById('scanDetectLabel');
+            const scanResultMsg  = document.getElementById('scanResultMsg');
+            const plateInput     = document.getElementById('plate_number');
+
+            scanInput.addEventListener('change', function () {
+                const file = this.files[0];
+                if (!file) return;
+
+                // Show image preview
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    scanPreviewImg.src = e.target.result;
+                    scanPreviewWrap.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+
+                scanUploadArea.classList.add('has-file');
+                scanDetectBtn.disabled = false;
+                scanResultMsg.style.display = 'none';
+            });
+
+            scanDetectBtn.addEventListener('click', async function () {
+                const file = scanInput.files[0];
+                if (!file) return;
+
+                // Show loading state
+                scanDetectBtn.disabled = true;
+                scanDetectLabel.textContent = 'Detecting…';
+
+                const formData = new FormData();
+                formData.append('image', file);
+
+                try {
+                    const resp = await fetch('/scan-plate', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const data = await resp.json();
+
+                    if (resp.ok && data.plate_number) {
+                        plateInput.value = data.plate_number;
+                        plateInput.dispatchEvent(new Event('input'));
+
+                        scanResultMsg.textContent = '\u2713 Detected: ' + data.plate_number;
+                        scanResultMsg.className = 'scan-result-msg ok';
+                    } else {
+                        scanResultMsg.textContent = '\u26a0 ' + (data.error || 'Detection failed. Please try another photo.');
+                        scanResultMsg.className = 'scan-result-msg err';
+                    }
+                } catch (err) {
+                    scanResultMsg.textContent = '\u26a0 Network error. Please try again.';
+                    scanResultMsg.className = 'scan-result-msg err';
+                } finally {
+                    scanResultMsg.style.display = 'block';
+                    scanDetectLabel.textContent = 'Detect Plate';
+                    scanDetectBtn.disabled = false;
+                }
+            });
+        })();
+    </script>
 </body>
 
 </html>
