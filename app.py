@@ -172,7 +172,10 @@ def detect_plate(image_path):
     upload_to_s3(crop_path, f"cropped/{crop_name}")
 
     # Run OCR on the cropped region
-    ocr_result = ocr.ocr(crop_path, cls=True)
+    try:
+        ocr_result = ocr.ocr(crop_path, cls=True)
+    except TypeError:
+        ocr_result = ocr.ocr(crop_path)
 
     if not ocr_result or not ocr_result[0]:
         return None
