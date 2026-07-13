@@ -50,6 +50,7 @@ venv.bak/
 .env.*.local
 
 # Application-specific
+cropped/
 upload/
 logs/
 *.log

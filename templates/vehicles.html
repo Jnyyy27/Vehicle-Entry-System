@@ -19,6 +19,7 @@
             --navy: #1B3358;
             --navy-deep: #102237;
             --amber: #F2A93B;
+            --amber-ink: #6B4708;
             --line: #E2E6EB;
             --radius: 14px;
         }
@@ -36,7 +37,7 @@
         }
 
         .page {
-            max-width: 640px;
+            max-width: 760px;
             margin: 0 auto;
             padding: 28px 24px 60px;
         }
@@ -47,6 +48,7 @@
             justify-content: space-between;
             gap: 16px;
             margin-bottom: 28px;
+            flex-wrap: nowrap;
         }
 
         .brand {
@@ -71,6 +73,12 @@
             height: 22px;
         }
 
+        .brand-text {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
         .brand-text .eyebrow {
             font-family: 'IBM Plex Mono', monospace;
             font-size: 11px;
@@ -78,6 +86,7 @@
             text-transform: uppercase;
             color: var(--ink-soft);
             display: block;
+            line-height: 1.3;
             margin-bottom: 2px;
         }
 
@@ -86,7 +95,15 @@
             font-size: 19px;
             font-weight: 700;
             margin: 0;
+            line-height: 1.2;
             color: var(--navy-deep);
+        }
+
+        .topbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
         }
 
         .back-link {
@@ -95,18 +112,36 @@
             gap: 6px;
             font-size: 13.5px;
             font-weight: 600;
-            color: var(--ink-soft);
             text-decoration: none;
-            border: 1px solid var(--line);
-            background: var(--surface);
             border-radius: 999px;
             padding: 9px 16px;
-            transition: border-color 0.15s ease, color 0.15s ease;
+            border: 1px solid var(--line);
+            transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+            white-space: nowrap;
         }
 
-        .back-link:hover {
+        .back-link.ghost {
+            color: var(--ink-soft);
+            background: var(--surface);
+        }
+
+        .back-link.ghost:hover {
             border-color: #C8CDD5;
             color: var(--ink);
+        }
+
+        /* Accent variant for the "View Registered Vehicles" action */
+        .back-link.accent {
+            color: var(--amber-ink);
+            background: #FFF8EA;
+            border-color: var(--amber);
+            font-weight: 700;
+        }
+
+        .back-link.accent:hover {
+            background: #FDEFCF;
+            border-color: #DE9727;
+            transform: translateY(-1px);
         }
 
         .back-link:focus-visible {
@@ -117,6 +152,7 @@
         .back-link svg {
             width: 14px;
             height: 14px;
+            flex-shrink: 0;
         }
 
         .intro {
@@ -297,6 +333,20 @@
                 margin-top: 0;
                 min-width: 0;
             }
+
+            .topbar {
+                flex-wrap: wrap;
+                align-items: center;
+            }
+
+            .topbar-actions {
+                width: 100%;
+            }
+
+            .topbar-actions .back-link {
+                flex: 1;
+                justify-content: center;
+            }
         }
 
         /* Toast notification */
@@ -455,14 +505,27 @@
                 </div>
             </div>
 
-            <a class="back-link" href="/dashboard">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
-                    stroke-linejoin="round">
-                    <line x1="19" y1="12" x2="5" y2="12" />
-                    <polyline points="12 19 5 12 12 5" />
-                </svg>
-                Dashboard
-            </a>
+            <div class="topbar-actions">
+                <a class="back-link accent" href="{{ url_for('vehicles_list') }}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M9 2h6a1 1 0 0 1 1 1v2H8V3a1 1 0 0 1 1-1Z" />
+                        <rect x="5" y="5" width="14" height="17" rx="2" />
+                        <line x1="9" y1="11" x2="15" y2="11" />
+                        <line x1="9" y1="15" x2="15" y2="15" />
+                    </svg>
+                    View Registered Vehicles
+                </a>
+
+                <a class="back-link ghost" href="/dashboard">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <line x1="19" y1="12" x2="5" y2="12" />
+                        <polyline points="12 19 5 12 12 5" />
+                    </svg>
+                    Dashboard
+                </a>
+            </div>
         </div>
 
         <div class="intro">
@@ -495,7 +558,7 @@
                     </svg>
                     Student ID
                 </label>
-                <input type="text" id="student_id" name="student_id" placeholder="e.g. 156234" required
+                <input type="text" id="student_id" name="student_id" placeholder="e.g. 22303507" required
                     autocomplete="off">
             </div>
 

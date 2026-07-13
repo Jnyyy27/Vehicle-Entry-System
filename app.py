@@ -1,4 +1,7 @@
 import os
+os.environ["FLAGS_use_mkldnn"] = "0"
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
 import uuid
 import boto3
 from botocore.exceptions import ClientError
@@ -288,6 +291,76 @@ def vehicles():
 
     return render_template("vehicles.html")
 
+@app.route("/vehicles/list", methods=["GET"])
+@login_required
+def vehicles_list():
+
+    if session.get("user", {}).get("role") != "Admin":
+        return render_template("403.html"), 403
+
+    conn = pymysql.connect(
+        host=DB_HOST,
+        user=DB_USER,
+        password=DB_PASSWORD,
+        database=DB_NAME,
+        cursorclass=pymysql.cursors.DictCursor
+    )
+
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT vehicle_id, student_name, student_id, plate_number, vehicle_type
+        FROM vehicles
+        ORDER BY vehicle_id DESC
+    """)
+    vehicles = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return render_template("vehicles_list.html", vehicles=vehicles)
+
+@app.route("/vehicles/edit/<int:vehicle_id>", methods=["POST"])
+@login_required
+def vehicles_edit(vehicle_id):
+    if session.get("user", {}).get("role") != "Admin":
+        return render_template("403.html"), 403
+
+    student_name = request.form["student_name"]
+    student_id = request.form["student_id"]
+    plate_number = request.form["plate_number"]
+    vehicle_type = request.form["vehicle_type"]
+
+    conn = pymysql.connect(host=DB_HOST, user=DB_USER, password=DB_PASSWORD, database=DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE vehicles
+        SET student_name=%s, student_id=%s, plate_number=%s, vehicle_type=%s
+        WHERE vehicle_id=%s
+    """, (student_name, student_id, plate_number, vehicle_type, vehicle_id))
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    flash(f"Vehicle {plate_number} updated successfully!", "success")
+    return redirect(url_for("vehicles_list"))
+
+
+@app.route("/vehicles/delete/<int:vehicle_id>", methods=["POST"])
+@login_required
+def vehicles_delete(vehicle_id):
+    if session.get("user", {}).get("role") != "Admin":
+        return render_template("403.html"), 403
+
+    conn = pymysql.connect(host=DB_HOST, user=DB_USER, password=DB_PASSWORD, database=DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM vehicles WHERE vehicle_id=%s", (vehicle_id,))
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    flash("Vehicle deleted.", "success")
+    return redirect(url_for("vehicles_list"))
+
 @app.route("/logs")
 @login_required
 def logs():
@@ -482,4 +555,4 @@ def logout():
     return redirect("/")
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="127.0.0.1", port=5000, debug=False, threaded=False)
