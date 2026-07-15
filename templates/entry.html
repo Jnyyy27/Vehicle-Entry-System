@@ -720,6 +720,7 @@
         </div>
 
         <form class="form-card" method="POST" action="/entry">
+            <input type="hidden" id="csrfToken" name="csrf_token" value="{{ csrf_token() }}">
 
             <!-- ── Camera / image scan ───────────────────────────── -->
             <div class="scan-section">
@@ -849,6 +850,7 @@
 
                 const formData = new FormData();
                 formData.append('image', file);
+                formData.append('csrf_token', document.getElementById('csrfToken').value);
 
                 try {
                     const resp = await fetch('/scan-plate', {

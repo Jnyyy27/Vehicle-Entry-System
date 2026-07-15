@@ -506,7 +506,7 @@
             </div>
 
             <div class="topbar-actions">
-                <a class="back-link accent" href="{{ url_for('vehicles_list') }}">
+                <a class="back-link accent" href="{{ url_for('vehicles_bp.vehicles_list') }}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                         stroke-linejoin="round">
                         <path d="M9 2h6a1 1 0 0 1 1 1v2H8V3a1 1 0 0 1 1-1Z" />
@@ -533,6 +533,7 @@
         </div>
 
         <form class="form-card" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
             <div class="field">
                 <label for="student_name">

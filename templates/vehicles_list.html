@@ -601,7 +601,7 @@
             </div>
 
             <div class="topbar-actions">
-                <a class="btn-link ghost" href="{{ url_for('dashboard') }}">
+                <a class="btn-link ghost" href="{{ url_for('dashboard_bp.dashboard') }}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
                         stroke-linejoin="round">
                         <line x1="19" y1="12" x2="5" y2="12" />
@@ -609,7 +609,7 @@
                     </svg>
                     Dashboard
                 </a>
-                <a class="btn-link solid" href="{{ url_for('vehicles') }}">
+                <a class="btn-link solid" href="{{ url_for('vehicles_bp.vehicles') }}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"
                         stroke-linejoin="round">
                         <line x1="12" y1="5" x2="12" y2="19" />
@@ -688,7 +688,7 @@
                 </div>
                 <h3>No vehicles registered yet</h3>
                 <p>Vehicles you register will show up here.</p>
-                <a class="btn-link solid" href="{{ url_for('vehicles') }}">
+                <a class="btn-link solid" href="{{ url_for('vehicles_bp.vehicles') }}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"
                         stroke-linejoin="round">
                         <line x1="12" y1="5" x2="12" y2="19" />
@@ -718,6 +718,7 @@
             </div>
 
             <form id="editForm" method="POST" action="">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="field">
                     <label for="edit_student_name">Student Name</label>
                     <input type="text" id="edit_student_name" name="student_name" required>
@@ -765,6 +766,7 @@
             <p id="deleteConfirmText">This will remove the vehicle record permanently.</p>
 
             <form id="deleteForm" method="POST" action="">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="modal-actions">
                     <button type="button" class="btn-cancel" onclick="closeDeleteModal()">Cancel</button>
                     <button type="submit" class="btn-delete">Delete</button>
