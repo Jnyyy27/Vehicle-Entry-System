@@ -62,6 +62,7 @@ def entry():
 
 
 @entry_bp.route("/scan-plate", methods=["POST"])
+@entry_bp.route("/api/detect-plate", methods=["POST"])
 @login_required
 def scan_plate():
     """Accept an image upload, run YOLO + PaddleOCR, return detected plate."""
@@ -99,7 +100,10 @@ def scan_plate():
     if not plate_text:
         return {"error": "No license plate detected in the image."}, 422
 
-    result = {"plate_number": plate_text}
+    result = {
+        "plate": plate_text,
+        "plate_number": plate_text,
+    }
     if s3_original_url:
         result["s3_url"] = s3_original_url
     return result

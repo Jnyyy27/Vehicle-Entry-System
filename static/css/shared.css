@@ -1,0 +1,337 @@
+/* ==========================================================================
+   Shared / Global Styles — USM Vehicle Entry System
+   ========================================================================== */
+
+/* ---------- CSS Variables -------------------------------------------------- */
+:root {
+    --bg: #F4F6F8;
+    --surface: #FFFFFF;
+    --ink: #10182B;
+    --ink-soft: #5B6678;
+    --ink-faint: #8A93A3;
+    --navy: #1B3358;
+    --navy-deep: #102237;
+    --amber: #F2A93B;
+    --amber-ink: #6B4708;
+    --green: #2F9E68;
+    --green-bg: #EAF7EF;
+    --green-ink: #1F7A4D;
+    --red: #C0392B;
+    --red-deep: #A6301F;
+    --neutral-bg: #EEF1F4;
+    --line: #E2E6EB;
+    --radius: 14px;
+}
+
+/* ---------- Reset & Base --------------------------------------------------- */
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Manrope', sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- Page Container ------------------------------------------------- */
+.page {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 28px 24px 60px;
+}
+
+/* ---------- Top Bar -------------------------------------------------------- */
+.topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 28px;
+}
+
+/* ---------- Brand ---------------------------------------------------------- */
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.brand-mark {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: var(--navy);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.brand-mark svg {
+    width: 22px;
+    height: 22px;
+}
+
+.brand-text .eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    display: block;
+    margin-bottom: 2px;
+}
+
+.brand-text h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 19px;
+    font-weight: 700;
+    margin: 0;
+    color: var(--navy-deep);
+}
+
+/* ---------- Back Link ------------------------------------------------------ */
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    text-decoration: none;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    border-radius: 999px;
+    padding: 9px 16px;
+    transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.back-link:hover {
+    border-color: #C8CDD5;
+    color: var(--ink);
+}
+
+.back-link:focus-visible {
+    outline: 2px solid var(--amber);
+    outline-offset: 2px;
+}
+
+.back-link svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* ---------- Intro Text ----------------------------------------------------- */
+.intro {
+    margin-bottom: 24px;
+}
+
+.intro p {
+    margin: 4px 0 0;
+    font-size: 14px;
+    color: var(--ink-soft);
+}
+
+/* ---------- Section Label -------------------------------------------------- */
+.section-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0 0 12px 2px;
+}
+
+/* ---------- Form Card ------------------------------------------------------ */
+.form-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 28px;
+    margin-bottom: 20px;
+}
+
+/* ---------- Field ---------------------------------------------------------- */
+.field {
+    margin-bottom: 20px;
+}
+
+.field label {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 7px;
+}
+
+.field label svg {
+    width: 15px;
+    height: 15px;
+    color: var(--ink-soft);
+    flex-shrink: 0;
+}
+
+.field input,
+.field select {
+    width: 100%;
+    font-family: 'Manrope', sans-serif;
+    font-size: 14.5px;
+    color: var(--ink);
+    background: #FBFCFD;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 11px 13px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.field input:focus,
+.field select:focus {
+    outline: none;
+    border-color: var(--navy);
+    box-shadow: 0 0 0 3px rgba(27, 51, 88, 0.1);
+}
+
+.field select {
+    appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235B6678' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
+    padding-right: 36px;
+}
+
+.field .hint {
+    font-size: 12px;
+    color: var(--ink-faint);
+    margin-top: 5px;
+}
+
+/* ---------- Submit Button -------------------------------------------------- */
+.submit-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    background: var(--navy);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 13px 18px;
+    font-family: 'Manrope', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.submit-btn:hover {
+    background: var(--navy-deep);
+    transform: translateY(-1px);
+}
+
+.submit-btn:focus-visible {
+    outline: 2px solid var(--amber);
+    outline-offset: 3px;
+}
+
+.submit-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* ---------- Submit Note ---------------------------------------------------- */
+.submit-note {
+    font-size: 12px;
+    color: var(--ink-faint);
+    margin: 0 0 16px;
+}
+
+/* ---------- Badge (generic) ------------------------------------------------ */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    border-radius: 999px;
+    padding: 4px 11px;
+    white-space: nowrap;
+}
+
+.badge::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.badge.entry {
+    background: var(--green-bg);
+    color: var(--green-ink);
+}
+
+.badge.entry::before {
+    background: #2F9E68;
+}
+
+.badge.exit {
+    background: #FFF3DC;
+    color: var(--amber-ink);
+}
+
+.badge.exit::before {
+    background: var(--amber);
+}
+
+.badge.student {
+    background: var(--green-bg);
+    color: var(--green-ink);
+}
+
+.badge.student::before {
+    background: #2F9E68;
+}
+
+.badge.visitor {
+    background: #FFF3DC;
+    color: var(--amber-ink);
+}
+
+.badge.visitor::before {
+    background: var(--amber);
+}
+
+.badge.neutral {
+    background: var(--neutral-bg);
+    color: var(--ink-soft);
+}
+
+.badge.neutral::before {
+    background: var(--ink-faint);
+}
+
+/* ---------- Footer --------------------------------------------------------- */
+footer {
+    margin-top: 36px;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+    font-size: 12px;
+    color: var(--ink-soft);
+    text-align: center;
+}
+
+/* ---------- Accessibility: Reduced Motion ---------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        transition: none !important;
+    }
+}

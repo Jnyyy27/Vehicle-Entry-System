@@ -1,0 +1,141 @@
+/* ==========================================================================
+   Vehicle Registration Page Styles
+   ========================================================================== */
+
+.page {
+    max-width: 760px;
+}
+
+/* ---------- Top Bar Actions ----------------------------------------------- */
+.topbar {
+    flex-wrap: nowrap;
+}
+
+.brand-text {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.brand-text .eyebrow {
+    line-height: 1.3;
+}
+
+.brand-text h1 {
+    line-height: 1.2;
+}
+
+.topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.back-link.ghost {
+    color: var(--ink-soft);
+    background: var(--surface);
+}
+
+.back-link.ghost:hover {
+    border-color: #C8CDD5;
+    color: var(--ink);
+}
+
+/* Accent variant for "View Registered Vehicles" */
+.back-link.accent {
+    color: var(--amber-ink);
+    background: #FFF8EA;
+    border-color: var(--amber);
+    font-weight: 700;
+}
+
+.back-link.accent:hover {
+    background: #FDEFCF;
+    border-color: #DE9727;
+    transform: translateY(-1px);
+}
+
+.back-link svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+
+/* ---------- Plate Field (Inline with Preview) ------------------------------ */
+.field.plate-field {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.field.plate-field .plate-input {
+    flex: 1;
+}
+
+/* ---------- Plate Preview Badge -------------------------------------------- */
+.plate-preview {
+    font-family: 'IBM Plex Mono', monospace;
+    background: #FFF8EA;
+    border: 1.5px solid var(--amber);
+    border-radius: 8px;
+    padding: 7px 14px;
+    text-align: center;
+    min-width: 110px;
+    margin-top: 26px;
+    flex-shrink: 0;
+}
+
+.plate-preview .plate-label {
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #6B4708;
+    display: block;
+    margin-bottom: 2px;
+}
+
+.plate-preview .plate-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: 0.04em;
+}
+
+.plate-preview .plate-value.empty {
+    color: var(--ink-faint);
+    font-weight: 500;
+}
+
+/* ---------- Divider -------------------------------------------------------- */
+.divider {
+    border: none;
+    border-top: 1px solid var(--line);
+    margin: 4px 0 22px;
+}
+
+/* ---------- Responsive ----------------------------------------------------- */
+@media (max-width: 480px) {
+    .field.plate-field {
+        flex-direction: column;
+    }
+
+    .plate-preview {
+        margin-top: 0;
+        min-width: 0;
+    }
+
+    .topbar {
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    .topbar-actions {
+        width: 100%;
+    }
+
+    .topbar-actions .back-link {
+        flex: 1;
+        justify-content: center;
+    }
+}

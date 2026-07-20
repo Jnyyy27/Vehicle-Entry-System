@@ -1,0 +1,133 @@
+/* ==========================================================================
+   Login / Sign In Page Styles
+   ========================================================================== */
+
+html,
+body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Manrope', sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+
+body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+.card {
+    width: 100%;
+    max-width: 380px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 24px 48px -24px rgba(16, 24, 43, 0.18);
+}
+
+/* Barrier-gate stripe */
+.barrier {
+    height: 7px;
+    background: repeating-linear-gradient(-45deg,
+            var(--navy) 0 14px,
+            var(--amber) 14px 28px);
+}
+
+.card-body {
+    padding: 36px 32px 32px;
+    text-align: center;
+}
+
+.brand-mark {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: var(--navy);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 18px;
+}
+
+.brand-mark svg {
+    width: 26px;
+    height: 26px;
+}
+
+.eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    display: block;
+    margin-bottom: 6px;
+}
+
+h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--navy-deep);
+    margin: 0 0 10px;
+}
+
+.sub {
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--ink-soft);
+    margin: 0 0 28px;
+}
+
+.signin-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    background: var(--navy);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 13px 18px;
+    font-family: 'Manrope', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.signin-btn:hover {
+    background: var(--navy-deep);
+    transform: translateY(-1px);
+}
+
+.signin-btn:focus-visible {
+    outline: 2px solid var(--amber);
+    outline-offset: 3px;
+}
+
+.signin-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.secured-by {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 20px;
+    font-size: 12px;
+    color: var(--ink-soft);
+}
+
+.secured-by svg {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+}

@@ -9,636 +9,9 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap"
         rel="stylesheet">
-    <style>
-        :root {
-            --bg: #F4F6F8;
-            --surface: #FFFFFF;
-            --ink: #10182B;
-            --ink-soft: #5B6678;
-            --ink-faint: #8A93A3;
-            --navy: #1B3358;
-            --navy-deep: #102237;
-            --amber: #F2A93B;
-            --amber-ink: #6B4708;
-            --green: #2F9E68;
-            --green-bg: #EAF7EF;
-            --green-ink: #1F7A4D;
-            --line: #E2E6EB;
-            --radius: 14px;
-        }
-
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            margin: 0;
-            background: var(--bg);
-            color: var(--ink);
-            font-family: 'Manrope', sans-serif;
-            -webkit-font-smoothing: antialiased;
-        }
-
-        .page {
-            max-width: 560px;
-            margin: 0 auto;
-            padding: 28px 24px 60px;
-        }
-
-        .topbar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 16px;
-            margin-bottom: 28px;
-        }
-
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .brand-mark {
-            width: 40px;
-            height: 40px;
-            border-radius: 10px;
-            background: var(--navy);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-
-        .brand-mark svg {
-            width: 22px;
-            height: 22px;
-        }
-
-        .brand-text .eyebrow {
-            font-family: 'IBM Plex Mono', monospace;
-            font-size: 11px;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-            color: var(--ink-soft);
-            display: block;
-            margin-bottom: 2px;
-        }
-
-        .brand-text h1 {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 19px;
-            font-weight: 700;
-            margin: 0;
-            color: var(--navy-deep);
-        }
-
-        .back-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 13.5px;
-            font-weight: 600;
-            color: var(--ink-soft);
-            text-decoration: none;
-            border: 1px solid var(--line);
-            background: var(--surface);
-            border-radius: 999px;
-            padding: 9px 16px;
-            transition: border-color 0.15s ease, color 0.15s ease;
-        }
-
-        .back-link:hover {
-            border-color: #C8CDD5;
-            color: var(--ink);
-        }
-
-        .back-link:focus-visible {
-            outline: 2px solid var(--amber);
-            outline-offset: 2px;
-        }
-
-        .back-link svg {
-            width: 14px;
-            height: 14px;
-        }
-
-        .intro {
-            margin-bottom: 24px;
-        }
-
-        .intro p {
-            margin: 4px 0 0;
-            font-size: 14px;
-            color: var(--ink-soft);
-        }
-
-        /* Form card */
-        .form-card {
-            background: var(--surface);
-            border: 1px solid var(--line);
-            border-radius: var(--radius);
-            padding: 28px;
-            margin-bottom: 20px;
-        }
-
-        /* Hero plate field — the primary, fast-entry control on this page */
-        .plate-field {
-            text-align: center;
-            margin-bottom: 22px;
-        }
-
-        .plate-field label {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 7px;
-            font-size: 13px;
-            font-weight: 700;
-            color: var(--ink);
-            margin-bottom: 10px;
-        }
-
-        .plate-field label svg {
-            width: 15px;
-            height: 15px;
-            color: var(--ink-soft);
-        }
-
-        .plate-field input {
-            width: 100%;
-            font-family: 'IBM Plex Mono', monospace;
-            font-size: 26px;
-            font-weight: 600;
-            text-align: center;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-            color: var(--ink);
-            background: #FBFCFD;
-            border: 1.5px solid var(--line);
-            border-radius: 10px;
-            padding: 16px 14px;
-            transition: border-color 0.15s ease, box-shadow 0.15s ease;
-        }
-
-        .plate-field input::placeholder {
-            font-weight: 500;
-            color: var(--ink-faint);
-            letter-spacing: 0.04em;
-        }
-
-        .plate-field input:focus {
-            outline: none;
-            border-color: var(--navy);
-            box-shadow: 0 0 0 3px rgba(27, 51, 88, 0.1);
-        }
-
-        .plate-preview {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            font-family: 'IBM Plex Mono', monospace;
-            background: #FFF8EA;
-            border: 1.5px solid var(--amber);
-            border-radius: 8px;
-            padding: 6px 14px;
-            margin-top: 14px;
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--ink);
-        }
-
-        .plate-preview.empty {
-            border-color: var(--line);
-            background: #FAFBFC;
-            color: var(--ink-faint);
-            font-weight: 500;
-        }
-
-        .plate-preview .dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: var(--amber);
-            flex-shrink: 0;
-        }
-
-        .plate-preview.empty .dot {
-            background: var(--ink-faint);
-        }
-
-        /* Direction segmented control */
-        .direction-label {
-            text-align: center;
-            font-size: 13px;
-            font-weight: 700;
-            color: var(--ink);
-            margin-bottom: 10px;
-        }
-
-        .segmented {
-            display: flex;
-            gap: 8px;
-            background: #EEF1F4;
-            border-radius: 10px;
-            padding: 5px;
-            margin-bottom: 22px;
-        }
-
-        .segmented input {
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            opacity: 0;
-            pointer-events: none;
-        }
-
-        .segmented label {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 7px;
-            padding: 11px 0;
-            border-radius: 7px;
-            font-size: 14px;
-            font-weight: 700;
-            color: var(--ink-soft);
-            cursor: pointer;
-            transition: background 0.15s ease, color 0.15s ease;
-        }
-
-        .segmented label svg {
-            width: 16px;
-            height: 16px;
-        }
-
-        .segmented input:checked+label {
-            background: var(--navy);
-            color: #fff;
-        }
-
-        .segmented input:focus-visible+label {
-            outline: 2px solid var(--amber);
-            outline-offset: 2px;
-        }
-
-        .submit-note {
-            font-size: 12px;
-            color: var(--ink-faint);
-            text-align: center;
-            margin: 0 0 16px;
-        }
-
-        .submit-btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            width: 100%;
-            background: var(--navy);
-            color: #fff;
-            border: none;
-            border-radius: 10px;
-            padding: 14px 18px;
-            font-family: 'Manrope', sans-serif;
-            font-size: 15.5px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: background 0.15s ease, transform 0.15s ease;
-        }
-
-        .submit-btn:hover {
-            background: var(--navy-deep);
-            transform: translateY(-1px);
-        }
-
-        .submit-btn:focus-visible {
-            outline: 2px solid var(--amber);
-            outline-offset: 3px;
-        }
-
-        .submit-btn svg {
-            width: 17px;
-            height: 17px;
-        }
-
-        /* Recent activity (optional — only renders if recent_entries is passed) */
-        .activity-card {
-            background: var(--surface);
-            border: 1px solid var(--line);
-            border-radius: var(--radius);
-            padding: 20px 22px;
-        }
-
-        .section-label {
-            font-family: 'IBM Plex Mono', monospace;
-            font-size: 11px;
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
-            color: var(--ink-soft);
-            margin: 0 0 14px 0;
-        }
-
-        .activity-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            padding: 10px 0;
-            border-top: 1px solid var(--line);
-        }
-
-        .activity-row:first-of-type {
-            border-top: none;
-            padding-top: 0;
-        }
-
-        .activity-plate {
-            font-family: 'IBM Plex Mono', monospace;
-            font-weight: 600;
-            font-size: 14px;
-        }
-
-        .activity-meta {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .badge {
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 0.04em;
-            text-transform: uppercase;
-            border-radius: 999px;
-            padding: 3px 10px;
-        }
-
-        .badge.entry {
-            background: var(--green-bg);
-            color: var(--green-ink);
-        }
-
-        .badge.exit {
-            background: #FFF3DC;
-            color: var(--amber-ink);
-        }
-
-        .activity-time {
-            font-size: 12px;
-            color: var(--ink-faint);
-            white-space: nowrap;
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            * {
-                transition: none !important;
-            }
-        }
-
-        /* ── Camera / scan section ─────────────────────────────────────── */
-        .scan-section {
-            margin-bottom: 22px;
-        }
-
-        .scan-label {
-            display: flex;
-            align-items: center;
-            gap: 7px;
-            font-size: 13px;
-            font-weight: 700;
-            color: var(--ink);
-            margin-bottom: 10px;
-        }
-
-        .scan-label svg {
-            width: 15px;
-            height: 15px;
-            color: var(--ink-soft);
-        }
-
-        .scan-upload-area {
-            position: relative;
-            border: 1.5px dashed var(--line);
-            border-radius: 10px;
-            background: #FAFBFC;
-            padding: 20px 16px;
-            text-align: center;
-            cursor: pointer;
-            transition: border-color 0.15s ease, background 0.15s ease;
-        }
-
-        .scan-upload-area:hover,
-        .scan-upload-area.has-file {
-            border-color: var(--navy);
-            background: #F6F8FA;
-        }
-
-        .scan-upload-area input[type="file"] {
-            position: absolute;
-            inset: 0;
-            width: 100%;
-            height: 100%;
-            opacity: 0;
-            cursor: pointer;
-        }
-
-        .scan-upload-hint {
-            font-size: 13px;
-            color: var(--ink-faint);
-            pointer-events: none;
-        }
-
-        .scan-upload-hint strong {
-            color: var(--navy);
-        }
-
-        .scan-preview-wrap {
-            display: none;
-            margin-top: 10px;
-            border-radius: 8px;
-            overflow: hidden;
-            border: 1px solid var(--line);
-            max-height: 200px;
-        }
-
-        .scan-preview-wrap img {
-            width: 100%;
-            height: 200px;
-            object-fit: contain;
-            background: #F0F2F4;
-            display: block;
-        }
-
-        .scan-detect-btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 7px;
-            width: 100%;
-            margin-top: 10px;
-            background: #EEF1F4;
-            color: var(--ink);
-            border: 1.5px solid var(--line);
-            border-radius: 9px;
-            padding: 11px 16px;
-            font-family: 'Manrope', sans-serif;
-            font-size: 14px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: background 0.15s ease, border-color 0.15s ease;
-        }
-
-        .scan-detect-btn:hover:not(:disabled) {
-            background: #E2E6EB;
-            border-color: #C8CDD5;
-        }
-
-        .scan-detect-btn:disabled {
-            opacity: 0.55;
-            cursor: not-allowed;
-        }
-
-        .scan-detect-btn svg {
-            width: 15px;
-            height: 15px;
-        }
-
-        .scan-result-msg {
-            display: none;
-            margin-top: 8px;
-            font-size: 13px;
-            font-weight: 600;
-            padding: 9px 12px;
-            border-radius: 8px;
-            border: 1px solid;
-        }
-
-        .scan-result-msg.ok {
-            background: var(--green-bg);
-            border-color: #A7DFC0;
-            color: var(--green-ink);
-        }
-
-        .scan-result-msg.err {
-            background: #FFF0EE;
-            border-color: #F5C0BA;
-            color: #9B2414;
-        }
-
-        .scan-divider {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin: 20px 0;
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--ink-faint);
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-        }
-
-        .scan-divider::before,
-        .scan-divider::after {
-            content: '';
-            flex: 1;
-            height: 1px;
-            background: var(--line);
-        }
-
-        /* Toast notification */
-        .toast-container {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 1000;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            width: 100%;
-            max-width: 420px;
-            padding: 0 16px;
-        }
-
-        .toast {
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-            background: var(--surface);
-            border: 1px solid var(--line);
-            border-left: 4px solid var(--green);
-            border-radius: 12px;
-            padding: 14px 12px 14px 16px;
-            box-shadow: 0 12px 32px -12px rgba(16, 24, 43, 0.25);
-            font-size: 14px;
-            animation: toast-in 0.25s ease;
-        }
-
-        .toast.error {
-            border-left-color: #C0392B;
-        }
-
-        .toast-icon {
-            flex-shrink: 0;
-            width: 18px;
-            height: 18px;
-            margin-top: 1px;
-            color: var(--green);
-        }
-
-        .toast.error .toast-icon {
-            color: #C0392B;
-        }
-
-        .toast-msg {
-            flex: 1;
-            color: var(--ink);
-            font-weight: 600;
-            line-height: 1.4;
-        }
-
-        .toast-close {
-            background: none;
-            border: none;
-            padding: 3px;
-            cursor: pointer;
-            color: var(--ink-faint);
-            flex-shrink: 0;
-            border-radius: 6px;
-            display: flex;
-        }
-
-        .toast-close:hover {
-            color: var(--ink-soft);
-            background: #F1F3F5;
-        }
-
-        .toast-close svg {
-            width: 14px;
-            height: 14px;
-            display: block;
-        }
-
-        @keyframes toast-in {
-            from {
-                opacity: 0;
-                transform: translateY(-8px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            .toast {
-                animation: none;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/shared.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/toasts.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/entry.css') }}">
 </head>
 
 <body>
@@ -725,17 +98,17 @@
             <!-- ── Camera / image scan ───────────────────────────── -->
             <div class="scan-section">
                 <div class="scan-label">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-                        stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-                        <circle cx="12" cy="13" r="4"/>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                        <circle cx="12" cy="13" r="4" />
                     </svg>
                     Scan Plate from Photo
                 </div>
 
                 <div class="scan-upload-area" id="scanUploadArea">
-                    <input type="file" id="scanInput" accept="image/jpeg,image/png,image/webp"
-                        capture="environment" aria-label="Upload vehicle photo">
+                    <input type="file" id="scanInput" accept="image/jpeg,image/png,image/webp" capture="environment"
+                        aria-label="Upload vehicle photo">
                     <p class="scan-upload-hint">
                         <strong>Tap to take a photo</strong> or choose from gallery<br>
                         <span style="font-size:11px;">JPEG · PNG · WebP — max 10 MB</span>
@@ -747,10 +120,10 @@
                 </div>
 
                 <button type="button" class="scan-detect-btn" id="scanDetectBtn" disabled>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                        stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="11" cy="11" r="8"/>
-                        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8" />
+                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
                     </svg>
                     <span id="scanDetectLabel">Detect Plate</span>
                 </button>
@@ -761,49 +134,75 @@
             <div class="scan-divider">or type manually</div>
 
             <!-- ── Manual plate entry ────────────────────────────── -->
-            <div class="plate-field">
-                <label for="plate_number">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <rect x="3" y="6" width="18" height="12" rx="2" />
-                        <line x1="7" y1="11" x2="17" y2="11" />
-                    </svg>
-                    Plate Number
-                </label>
-                <input type="text" id="plate_number" name="plate_number" placeholder="QKA 4521" required autofocus
-                    autocomplete="off" oninput="
-                        const v = this.value.trim();
-                        const p = document.getElementById('platePreview');
-                        document.getElementById('platePreviewVal').textContent = v.toUpperCase() || 'Waiting for plate number';
-                        p.classList.toggle('empty', !v);
-                    ">
-                <div class="plate-preview empty" id="platePreview">
+            <div class="plate-row">
+                <div class="plate-field">
+                    <label for="plate_number">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="6" width="18" height="12" rx="2" />
+                            <line x1="7" y1="11" x2="17" y2="11" />
+                        </svg>
+                        Plate Number
+                    </label>
+                    <input type="text" id="plate_number" name="plate_number" placeholder="QKA 4521" required autofocus
+                        autocomplete="off" oninput="
+                            const v = this.value.trim();
+                            document.getElementById('platePreviewVal').textContent = v.toUpperCase() || '-- -- --';
+                            document.getElementById('platePreviewVal').classList.toggle('empty', !v);
+                        ">
+                </div>
+
+                <div class="plate-preview" id="platePreviewWrap" aria-hidden="true">
                     <span class="dot"></span>
-                    <span id="platePreviewVal">Waiting for plate number</span>
+                    <span class="plate-value empty" id="platePreviewVal">-- -- --</span>
                 </div>
             </div>
 
-            <p class="submit-note">Make sure the plate is correct before logging.</p>
+            <!-- ── Direction segmented control ───────────────────── -->
+            <p class="direction-label">Direction</p>
+            <div class="segmented">
+                <input type="radio" id="dirEntry" name="direction" value="Entry" checked>
+                <label for="dirEntry">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <polyline points="15 17 20 12 15 7" />
+                        <polyline points="4 17 9 12 4 7" />
+                    </svg>
+                    Entry
+                </label>
+                <input type="radio" id="dirExit" name="direction" value="Exit">
+                <label for="dirExit">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <polyline points="9 17 4 12 9 7" />
+                        <polyline points="20 17 15 12 20 7" />
+                    </svg>
+                    Exit
+                </label>
+            </div>
+
+            <p class="submit-note">Submitting will log the gate transaction for this vehicle.</p>
 
             <button type="submit" class="submit-btn">
-                <span>Log Vehicle</span>
+                Submit Entry
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"
                     stroke-linejoin="round">
                     <polyline points="20 6 9 17 4 12" />
                 </svg>
             </button>
-
         </form>
 
         {% if recent_entries %}
-        <div class="activity-card">
+        <div class="activity-card" style="margin-top: 20px;">
             <p class="section-label">Recent activity</p>
             {% for entry in recent_entries %}
             <div class="activity-row">
-                <span class="activity-plate">{{ entry.plate_number }}</span>
+                <span class="activity-plate mono">{{ entry[0] }}</span>
                 <div class="activity-meta">
-                    <span class="badge {{ entry.direction }}">{{ entry.direction }}</span>
-                    <span class="activity-time">{{ entry.logged_at }}</span>
+                    <span class="badge {{ 'entry' if entry[1] == 'Entry' else 'exit' }}">
+                        {{ entry[1] }}
+                    </span>
+                    <span class="activity-time mono">{{ entry[2] }}</span>
                 </div>
             </div>
             {% endfor %}
@@ -811,75 +210,66 @@
         {% endif %}
 
     </div>
+
     <script>
-        // ── Scan plate via YOLO + PaddleOCR ──────────────────────────────
-        (function () {
-            const scanInput      = document.getElementById('scanInput');
-            const scanUploadArea = document.getElementById('scanUploadArea');
-            const scanPreviewWrap= document.getElementById('scanPreviewWrap');
-            const scanPreviewImg = document.getElementById('scanPreviewImg');
-            const scanDetectBtn  = document.getElementById('scanDetectBtn');
-            const scanDetectLabel= document.getElementById('scanDetectLabel');
-            const scanResultMsg  = document.getElementById('scanResultMsg');
-            const plateInput     = document.getElementById('plate_number');
+        const scanInput = document.getElementById('scanInput');
+        const scanUploadArea = document.getElementById('scanUploadArea');
+        const scanPreviewImg = document.getElementById('scanPreviewImg');
+        const scanPreviewWrap = document.getElementById('scanPreviewWrap');
+        const scanDetectBtn = document.getElementById('scanDetectBtn');
 
-            scanInput.addEventListener('change', function () {
-                const file = this.files[0];
-                if (!file) return;
-
-                // Show image preview
-                const reader = new FileReader();
-                reader.onload = function (e) {
-                    scanPreviewImg.src = e.target.result;
-                    scanPreviewWrap.style.display = 'block';
-                };
-                reader.readAsDataURL(file);
-
+        scanInput.addEventListener('change', () => {
+            if (scanInput.files && scanInput.files[0]) {
                 scanUploadArea.classList.add('has-file');
+                scanPreviewImg.src = URL.createObjectURL(scanInput.files[0]);
+                scanPreviewWrap.style.display = 'block';
                 scanDetectBtn.disabled = false;
-                scanResultMsg.style.display = 'none';
-            });
+            }
+        });
 
-            scanDetectBtn.addEventListener('click', async function () {
-                const file = scanInput.files[0];
-                if (!file) return;
+        scanDetectBtn.addEventListener('click', async () => {
+            if (!scanInput.files || !scanInput.files[0]) return;
 
-                // Show loading state
-                scanDetectBtn.disabled = true;
-                scanDetectLabel.textContent = 'Detecting…';
+            const formData = new FormData();
+            formData.append('image', scanInput.files[0]);
 
-                const formData = new FormData();
-                formData.append('image', file);
-                formData.append('csrf_token', document.getElementById('csrfToken').value);
+            scanDetectBtn.disabled = true;
+            const label = document.getElementById('scanDetectLabel');
+            const origLabel = label.textContent;
+            label.textContent = 'Detecting…';
 
-                try {
-                    const resp = await fetch('/scan-plate', {
-                        method: 'POST',
-                        body: formData
-                    });
+            const msgBar = document.getElementById('scanResultMsg');
+            msgBar.style.display = 'none';
+            msgBar.className = 'scan-result-msg';
 
-                    const data = await resp.json();
+            try {
+                const res = await fetch('/scan-plate', {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': document.getElementById('csrfToken').value },
+                    body: formData,
+                });
+                const data = await res.json();
 
-                    if (resp.ok && data.plate_number) {
-                        plateInput.value = data.plate_number;
-                        plateInput.dispatchEvent(new Event('input'));
-
-                        scanResultMsg.textContent = '\u2713 Detected: ' + data.plate_number;
-                        scanResultMsg.className = 'scan-result-msg ok';
-                    } else {
-                        scanResultMsg.textContent = '\u26a0 ' + (data.error || 'Detection failed. Please try another photo.');
-                        scanResultMsg.className = 'scan-result-msg err';
-                    }
-                } catch (err) {
-                    scanResultMsg.textContent = '\u26a0 Network error. Please try again.';
-                    scanResultMsg.className = 'scan-result-msg err';
-                } finally {
-                    scanResultMsg.style.display = 'block';
-                    scanDetectLabel.textContent = 'Detect Plate';
-                    scanDetectBtn.disabled = false;
+                msgBar.style.display = 'block';
+                if (data.plate) {
+                    msgBar.className = 'scan-result-msg ok';
+                    msgBar.textContent = 'Detected: ' + data.plate.toUpperCase();
+                    document.getElementById('plate_number').value = data.plate;
+                    document.getElementById('platePreviewVal').textContent = data.plate.toUpperCase();
+                    document.getElementById('platePreviewVal').classList.remove('empty');
+                } else {
+                    msgBar.className = 'scan-result-msg err';
+                    msgBar.textContent = data.error || 'Could not detect a plate number.';
                 }
-            });
-        })();
+            } catch (e) {
+                msgBar.style.display = 'block';
+                msgBar.className = 'scan-result-msg err';
+                msgBar.textContent = 'Request failed. Try again.';
+            } finally {
+                scanDetectBtn.disabled = false;
+                label.textContent = origLabel;
+            }
+        });
     </script>
 </body>
 

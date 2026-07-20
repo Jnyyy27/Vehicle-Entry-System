@@ -1,0 +1,360 @@
+/* ==========================================================================
+   Vehicle Entry Page Styles
+   ========================================================================== */
+
+.page {
+    max-width: 600px;
+}
+
+/* ---------- Plate Row (field + preview side-by-side) ----------------------- */
+.plate-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    margin-bottom: 22px;
+}
+
+/* ---------- Hero Plate Field ----------------------------------------------- */
+.plate-field {
+    flex: 1;
+    min-width: 0;
+    text-align: left;
+    /* was center */
+    margin-bottom: 0;
+}
+
+.plate-field label {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    /* was center */
+    gap: 7px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 10px;
+}
+
+.plate-field label svg {
+    width: 15px;
+    height: 15px;
+    color: var(--ink-soft);
+}
+
+.plate-field input {
+    width: 100%;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 18px;
+    /* was 26px */
+    font-weight: 600;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink);
+    background: #FBFCFD;
+    border: 1.5px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 12px;
+    /* was 16px 14px */
+    box-sizing: border-box;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.plate-field input::placeholder {
+    font-weight: 500;
+    color: var(--ink-faint);
+    letter-spacing: 0.04em;
+}
+
+.plate-field input:focus {
+    outline: none;
+    border-color: var(--navy);
+    box-shadow: 0 0 0 3px rgba(27, 51, 88, 0.1);
+}
+
+/* ---------- Plate Preview -------------------------------------------------- */
+.plate-preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-family: 'IBM Plex Mono', monospace;
+    background: #FFF8EA;
+    border: 1.5px solid var(--amber);
+    border-radius: 8px;
+    padding: 10px 12px;
+    /* was 16px 14px — match input */
+    margin-top: 0;
+    flex-shrink: 0;
+    white-space: nowrap;
+    box-sizing: border-box;
+    font-size: 18px;
+    /* was 26px — match input */
+    font-weight: 600;
+}
+
+.plate-preview.empty {
+    border-color: var(--line);
+    background: #FAFBFC;
+    color: var(--ink-faint);
+    font-weight: 500;
+}
+
+.plate-preview .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--amber);
+    flex-shrink: 0;
+}
+
+.plate-preview.empty .dot {
+    background: var(--ink-faint);
+}
+
+/* ---------- Direction Segmented Control ------------------------------------ */
+.direction-label {
+    text-align: left;
+    /* was center */
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 10px;
+}
+
+.segmented {
+    display: flex;
+    gap: 8px;
+    background: #EEF1F4;
+    border-radius: 10px;
+    padding: 5px;
+    margin-bottom: 22px;
+}
+
+.segmented input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.segmented label {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 11px 0;
+    border-radius: 7px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--ink-soft);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.segmented label svg {
+    width: 16px;
+    height: 16px;
+}
+
+.segmented input:checked+label {
+    background: var(--navy);
+    color: #fff;
+}
+
+.segmented input:focus-visible+label {
+    outline: 2px solid var(--amber);
+    outline-offset: 2px;
+}
+
+/* ---------- Camera / Scan Section ------------------------------------------ */
+.scan-section {
+    margin-bottom: 22px;
+}
+
+.scan-label {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 10px;
+}
+
+.scan-label svg {
+    width: 15px;
+    height: 15px;
+    color: var(--ink-soft);
+}
+
+.scan-upload-area {
+    position: relative;
+    border: 1.5px dashed var(--line);
+    border-radius: 10px;
+    background: #FAFBFC;
+    padding: 20px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.scan-upload-area:hover,
+.scan-upload-area.has-file {
+    border-color: var(--navy);
+    background: #F6F8FA;
+}
+
+.scan-upload-area input[type="file"] {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.scan-upload-hint {
+    font-size: 13px;
+    color: var(--ink-faint);
+    pointer-events: none;
+}
+
+.scan-upload-hint strong {
+    color: var(--navy);
+}
+
+.scan-preview-wrap {
+    display: none;
+    margin-top: 10px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    max-height: 200px;
+}
+
+.scan-preview-wrap img {
+    width: 100%;
+    height: 200px;
+    object-fit: contain;
+    background: #F0F2F4;
+    display: block;
+}
+
+.scan-detect-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    width: 100%;
+    margin-top: 10px;
+    background: #EEF1F4;
+    color: var(--ink);
+    border: 1.5px solid var(--line);
+    border-radius: 9px;
+    padding: 11px 16px;
+    font-family: 'Manrope', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.scan-detect-btn:hover:not(:disabled) {
+    background: #E2E6EB;
+    border-color: #C8CDD5;
+}
+
+.scan-detect-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.scan-detect-btn svg {
+    width: 15px;
+    height: 15px;
+}
+
+.scan-result-msg {
+    display: none;
+    margin-top: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 9px 12px;
+    border-radius: 8px;
+    border: 1px solid;
+}
+
+.scan-result-msg.ok {
+    background: var(--green-bg);
+    border-color: #A7DFC0;
+    color: var(--green-ink);
+}
+
+.scan-result-msg.err {
+    background: #FFF0EE;
+    border-color: #F5C0BA;
+    color: #9B2414;
+}
+
+.scan-divider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 20px 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.scan-divider::before,
+.scan-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+}
+
+/* ---------- Activity Card ---------- */
+.activity-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+}
+
+.activity-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 0;
+    border-top: 1px solid var(--line);
+}
+
+.activity-row:first-of-type {
+    border-top: none;
+    padding-top: 0;
+}
+
+.activity-plate {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.activity-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.activity-time {
+    font-size: 12px;
+    color: var(--ink-faint);
+    white-space: nowrap;
+}

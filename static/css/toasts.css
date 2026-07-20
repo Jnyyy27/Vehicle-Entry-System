@@ -1,0 +1,94 @@
+/* ==========================================================================
+   Toast Notifications — Reusable across pages
+   ========================================================================== */
+
+.toast-container {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    max-width: 420px;
+    padding: 0 16px;
+}
+
+.toast {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--green);
+    border-radius: 12px;
+    padding: 14px 12px 14px 16px;
+    box-shadow: 0 12px 32px -12px rgba(16, 24, 43, 0.25);
+    font-size: 14px;
+    animation: toast-in 0.25s ease;
+}
+
+.toast.error {
+    border-left-color: #C0392B;
+}
+
+.toast-icon {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    margin-top: 1px;
+    color: var(--green);
+}
+
+.toast.error .toast-icon {
+    color: #C0392B;
+}
+
+.toast-msg {
+    flex: 1;
+    color: var(--ink);
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.toast-close {
+    background: none;
+    border: none;
+    padding: 3px;
+    cursor: pointer;
+    color: var(--ink-faint);
+    flex-shrink: 0;
+    border-radius: 6px;
+    display: flex;
+}
+
+.toast-close:hover {
+    color: var(--ink-soft);
+    background: #F1F3F5;
+}
+
+.toast-close svg {
+    width: 14px;
+    height: 14px;
+    display: block;
+}
+
+@keyframes toast-in {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .toast {
+        animation: none;
+    }
+}

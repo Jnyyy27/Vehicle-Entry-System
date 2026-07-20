@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 
 <head>
@@ -9,369 +9,56 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap"
         rel="stylesheet">
-    <style>
-        :root {
-            --bg: #F4F6F8;
-            --surface: #FFFFFF;
-            --ink: #10182B;
-            --ink-soft: #5B6678;
-            --ink-faint: #8A93A3;
-            --navy: #1B3358;
-            --navy-deep: #102237;
-            --amber: #F2A93B;
-            --amber-ink: #6B4708;
-            --green-bg: #EAF7EF;
-            --green-ink: #1F7A4D;
-            --neutral-bg: #EEF1F4;
-            --line: #E2E6EB;
-            --radius: 14px;
-        }
-
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            margin: 0;
-            background: var(--bg);
-            color: var(--ink);
-            font-family: 'Manrope', sans-serif;
-            -webkit-font-smoothing: antialiased;
-        }
-
-        .page {
-            max-width: 880px;
-            margin: 0 auto;
-            padding: 28px 24px 60px;
-        }
-
-        .topbar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 16px;
-            margin-bottom: 28px;
-        }
-
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .brand-mark {
-            width: 40px;
-            height: 40px;
-            border-radius: 10px;
-            background: var(--navy);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-
-        .brand-mark svg {
-            width: 22px;
-            height: 22px;
-        }
-
-        .brand-text .eyebrow {
-            font-family: 'IBM Plex Mono', monospace;
-            font-size: 11px;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-            color: var(--ink-soft);
-            display: block;
-            margin-bottom: 2px;
-        }
-
-        .brand-text h1 {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 19px;
-            font-weight: 700;
-            margin: 0;
-            color: var(--navy-deep);
-        }
-
-        .back-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 13.5px;
-            font-weight: 600;
-            color: var(--ink-soft);
-            text-decoration: none;
-            border: 1px solid var(--line);
-            background: var(--surface);
-            border-radius: 999px;
-            padding: 9px 16px;
-            transition: border-color 0.15s ease, color 0.15s ease;
-        }
-
-        .back-link:hover {
-            border-color: #C8CDD5;
-            color: var(--ink);
-        }
-
-        .back-link:focus-visible {
-            outline: 2px solid var(--amber);
-            outline-offset: 2px;
-        }
-
-        .back-link svg {
-            width: 14px;
-            height: 14px;
-        }
-
-        .intro {
-            margin-bottom: 22px;
-        }
-
-        .intro p {
-            margin: 4px 0 0;
-            font-size: 14px;
-            color: var(--ink-soft);
-        }
-
-        /* Toolbar: search + count */
-        .toolbar {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 14px;
-            flex-wrap: wrap;
-        }
-
-        .search-box {
-            position: relative;
-            flex: 1;
-            min-width: 200px;
-        }
-
-        .search-box svg {
-            position: absolute;
-            left: 13px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 16px;
-            height: 16px;
-            color: var(--ink-faint);
-            pointer-events: none;
-        }
-
-        .search-box input {
-            width: 100%;
-            font-family: 'Manrope', sans-serif;
-            font-size: 14px;
-            color: var(--ink);
-            background: var(--surface);
-            border: 1px solid var(--line);
-            border-radius: 10px;
-            padding: 10px 14px 10px 38px;
-            transition: border-color 0.15s ease, box-shadow 0.15s ease;
-        }
-
-        .search-box input:focus {
-            outline: none;
-            border-color: var(--navy);
-            box-shadow: 0 0 0 3px rgba(27, 51, 88, 0.1);
-        }
-
-        .count-pill {
-            font-family: 'IBM Plex Mono', monospace;
-            font-size: 12px;
-            color: var(--ink-soft);
-            background: var(--surface);
-            border: 1px solid var(--line);
-            border-radius: 999px;
-            padding: 7px 13px;
-            white-space: nowrap;
-        }
-
-        /* Table card */
-        .table-card {
-            background: var(--surface);
-            border: 1px solid var(--line);
-            border-radius: var(--radius);
-            overflow: hidden;
-        }
-
-        .table-scroll {
-            max-height: 540px;
-            overflow-y: auto;
-        }
-
-        .table-wrap {
-            overflow-x: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 13.5px;
-        }
-
-        thead th {
-            position: sticky;
-            top: 0;
-            z-index: 1;
-            background: var(--surface);
-            text-align: left;
-            font-family: 'IBM Plex Mono', monospace;
-            font-size: 11px;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            color: var(--ink-soft);
-            font-weight: 600;
-            padding: 13px 16px;
-            border-bottom: 1px solid var(--line);
-            white-space: nowrap;
-        }
-
-        tbody td {
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--line);
-            vertical-align: middle;
-        }
-
-        tbody tr:last-child td {
-            border-bottom: none;
-        }
-
-        tbody tr:hover {
-            background: #FAFBFC;
-        }
-
-        .mono {
-            font-family: 'IBM Plex Mono', monospace;
-        }
-
-        .id-cell {
-            color: var(--ink-faint);
-            font-size: 12.5px;
-        }
-
-        .plate-cell {
-            font-weight: 600;
-            letter-spacing: 0.02em;
-        }
-
-        .time-cell {
-            color: var(--ink-soft);
-            white-space: nowrap;
-        }
-
-        .badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            font-size: 11.5px;
-            font-weight: 700;
-            letter-spacing: 0.02em;
-            border-radius: 999px;
-            padding: 4px 11px;
-            white-space: nowrap;
-        }
-
-        .badge::before {
-            content: "";
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            display: inline-block;
-        }
-
-        .badge.student {
-            background: var(--green-bg);
-            color: var(--green-ink);
-        }
-
-        .badge.student::before {
-            background: #2F9E68;
-        }
-
-        .badge.visitor {
-            background: #FFF3DC;
-            color: var(--amber-ink);
-        }
-
-        .badge.visitor::before {
-            background: var(--amber);
-        }
-
-        .badge.entry {
-            background: var(--green-bg);
-            color: var(--green-ink);
-        }
-
-        .badge.entry::before {
-            background: #2F9E68;
-        }
-
-        .badge.exit {
-            background: #FFF3DC;
-            color: var(--amber-ink);
-        }
-
-        .badge.exit::before {
-            background: var(--amber);
-        }
-
-        .badge.neutral {
-            background: var(--neutral-bg);
-            color: var(--ink-soft);
-        }
-
-        .badge.neutral::before {
-            background: var(--ink-faint);
-        }
-
-        /* Empty states */
-        .empty-state {
-            text-align: center;
-            padding: 56px 24px;
-            color: var(--ink-soft);
-        }
-
-        .empty-state svg {
-            width: 36px;
-            height: 36px;
-            color: var(--ink-faint);
-            margin-bottom: 12px;
-        }
-
-        .empty-state p {
-            margin: 0;
-            font-size: 14px;
-        }
-
-        .empty-state p.faint {
-            font-size: 12.5px;
-            color: var(--ink-faint);
-            margin-top: 4px;
-        }
-
-        #noResults {
-            display: none;
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            * {
-                transition: none !important;
-            }
-        }
-
-        @media (max-width: 560px) {
-
-            th:first-child,
-            td.id-cell {
-                display: none;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/shared.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/toasts.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/logs.css') }}">
 </head>
 
 <body>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="true">
+        {% for category, message in messages %}
+        <div class="toast {{ 'error' if category == 'error' else '' }}" role="status">
+            <span class="toast-icon">
+                {% if category == 'error' %}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+                {% else %}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                </svg>
+                {% endif %}
+            </span>
+            <span class="toast-msg">{{ message }}</span>
+            <button class="toast-close" onclick="this.closest('.toast').remove()" aria-label="Dismiss">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+    <script>
+        setTimeout(() => {
+            document.querySelectorAll('.toast').forEach(t => {
+                t.style.transition = 'opacity 0.25s ease';
+                t.style.opacity = '0';
+                setTimeout(() => t.remove(), 250);
+            });
+        }, 4000);
+    </script>
+    {% endif %}
+    {% endwith %}
+
     <div class="page">
 
         <div class="topbar">
