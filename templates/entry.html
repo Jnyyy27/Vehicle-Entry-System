@@ -192,6 +192,34 @@
             </button>
         </form>
 
+        <section class="chatbot-panel" aria-labelledby="chatbotTitle">
+            <div class="chatbot-head">
+                <div class="chatbot-mark">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M12 3 4 7v5c0 5 3.4 8.4 8 9 4.6-.6 8-4 8-9V7l-8-4Z" />
+                        <path d="M9.5 12.5 11 14l3.5-4" />
+                    </svg>
+                </div>
+                <div>
+                    <p class="chatbot-eyebrow">Driver Assistant · Ollama</p>
+                    <h2 id="chatbotTitle">Driver Assistant</h2>
+                </div>
+            </div>
+
+            <p class="chatbot-meta" id="chatbotMeta">Submit entry to receive direction-specific guidance.</p>
+
+            <div class="chatbot-log" id="chatbotLog" aria-live="polite">
+                <div class="chatbot-bubble assistant">Hi. I will provide guidance after you submit this vehicle entry.
+                </div>
+            </div>
+
+            <form class="chatbot-input-row" id="chatbotForm" autocomplete="off">
+                <input type="text" id="chatbotInput" placeholder="Ask, e.g. What should I do next?" maxlength="240">
+                <button type="submit" id="chatbotSendBtn">Send</button>
+            </form>
+        </section>
+
         {% if recent_entries %}
         <div class="activity-card" style="margin-top: 20px;">
             <p class="section-label">Recent activity</p>
@@ -212,11 +240,75 @@
     </div>
 
     <script>
+        const entryForm = document.querySelector('.form-card');
+        const submitBtn = entryForm.querySelector('.submit-btn');
         const scanInput = document.getElementById('scanInput');
         const scanUploadArea = document.getElementById('scanUploadArea');
         const scanPreviewImg = document.getElementById('scanPreviewImg');
         const scanPreviewWrap = document.getElementById('scanPreviewWrap');
         const scanDetectBtn = document.getElementById('scanDetectBtn');
+        const chatbotMeta = document.getElementById('chatbotMeta');
+        const chatbotLog = document.getElementById('chatbotLog');
+        const chatbotForm = document.getElementById('chatbotForm');
+        const chatbotInput = document.getElementById('chatbotInput');
+        const chatbotSendBtn = document.getElementById('chatbotSendBtn');
+
+        let activePlate = '';
+        let activeCategory = '';
+
+        function addChatBubble(role, text) {
+            const bubble = document.createElement('div');
+            bubble.className = `chatbot-bubble ${role}`;
+            bubble.textContent = text;
+            chatbotLog.appendChild(bubble);
+            chatbotLog.scrollTop = chatbotLog.scrollHeight;
+        }
+
+        function ensureToastContainer() {
+            let container = document.getElementById('toastContainer');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toastContainer';
+                container.className = 'toast-container';
+                container.setAttribute('aria-live', 'polite');
+                container.setAttribute('aria-atomic', 'true');
+                document.body.appendChild(container);
+            }
+            return container;
+        }
+
+        function showSuccessToast(message) {
+            const container = ensureToastContainer();
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.setAttribute('role', 'status');
+            toast.innerHTML = `
+                <span class="toast-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                </span>
+                <span class="toast-msg"></span>
+                <button class="toast-close" aria-label="Dismiss">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            `;
+            toast.querySelector('.toast-msg').textContent = message;
+
+            const closeBtn = toast.querySelector('.toast-close');
+            closeBtn.addEventListener('click', () => toast.remove());
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.transition = 'opacity 0.25s ease';
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 250);
+            }, 4000);
+        }
 
         scanInput.addEventListener('change', () => {
             if (scanInput.files && scanInput.files[0]) {
@@ -257,6 +349,7 @@
                     document.getElementById('plate_number').value = data.plate;
                     document.getElementById('platePreviewVal').textContent = data.plate.toUpperCase();
                     document.getElementById('platePreviewVal').classList.remove('empty');
+                    chatbotMeta.textContent = 'Plate detected. Submit entry to receive AI guidance for IN or OUT.';
                 } else {
                     msgBar.className = 'scan-result-msg err';
                     msgBar.textContent = data.error || 'Could not detect a plate number.';
@@ -268,6 +361,126 @@
             } finally {
                 scanDetectBtn.disabled = false;
                 label.textContent = origLabel;
+            }
+        });
+
+        entryForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const plateValue = document.getElementById('plate_number').value.trim();
+            if (!plateValue) {
+                chatbotMeta.textContent = 'Please enter a plate number before submitting.';
+                return;
+            }
+
+            submitBtn.disabled = true;
+            const submitLabel = submitBtn.firstChild;
+            if (submitLabel && submitLabel.nodeType === Node.TEXT_NODE) {
+                submitLabel.textContent = 'Submitting... ';
+            }
+
+            const formData = new FormData(entryForm);
+
+            try {
+                const res = await fetch('/entry', {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': document.getElementById('csrfToken').value,
+                    },
+                    body: formData,
+                });
+
+                const data = await res.json();
+                if (!res.ok || !data.success) {
+                    chatbotMeta.textContent = data.error || 'Failed to submit entry. Please try again.';
+                    return;
+                }
+
+                activePlate = (data.plate_number || '').toUpperCase();
+                activeCategory = data.vehicle_category || 'Vehicle';
+                const directionText = data.direction === 'IN' ? 'Entering campus' : 'Exiting campus';
+
+                chatbotLog.innerHTML = '';
+                chatbotMeta.textContent = `${directionText} · ${activePlate}`;
+
+                const welcome = data.welcome_message || `Your vehicle has been logged as ${data.direction}.`;
+                addChatBubble('assistant', welcome);
+                showSuccessToast(data.transaction_message || `Vehicle ${activePlate} recorded as ${data.direction}.`);
+
+                // Reset form/scan UI after successful transaction so the next car starts fresh.
+                entryForm.reset();
+                document.getElementById('plate_number').value = '';
+                const platePreviewVal = document.getElementById('platePreviewVal');
+                platePreviewVal.textContent = '-- -- --';
+                platePreviewVal.classList.add('empty');
+
+                scanInput.value = '';
+                scanDetectBtn.disabled = true;
+                scanUploadArea.classList.remove('has-file');
+                scanPreviewImg.src = '';
+                scanPreviewWrap.style.display = 'none';
+
+                const msgBar = document.getElementById('scanResultMsg');
+                msgBar.style.display = 'none';
+                msgBar.textContent = '';
+                msgBar.className = 'scan-result-msg';
+            } catch (err) {
+                chatbotMeta.textContent = 'Could not submit entry right now. Please try again.';
+            } finally {
+                submitBtn.disabled = false;
+                const resetLabel = submitBtn.firstChild;
+                if (resetLabel && resetLabel.nodeType === Node.TEXT_NODE) {
+                    resetLabel.textContent = 'Submit Entry ';
+                }
+            }
+        });
+
+        chatbotForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const message = chatbotInput.value.trim();
+            if (!message) {
+                return;
+            }
+            if (!activePlate) {
+                chatbotMeta.textContent = 'Submit an entry first so I can reply based on IN or OUT status.';
+                return;
+            }
+
+            addChatBubble('user', message);
+            chatbotInput.value = '';
+            chatbotSendBtn.disabled = true;
+
+            const history = Array.from(chatbotLog.querySelectorAll('.chatbot-bubble')).map((node) => {
+                return {
+                    role: node.classList.contains('user') ? 'user' : 'assistant',
+                    content: node.textContent || '',
+                };
+            });
+
+            try {
+                const res = await fetch('/api/assistant-chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.getElementById('csrfToken').value,
+                    },
+                    body: JSON.stringify({
+                        plate_number: activePlate,
+                        vehicle_category: activeCategory,
+                        message,
+                        history,
+                    }),
+                });
+
+                const data = await res.json();
+                addChatBubble('assistant', data.reply || data.error || 'No response received.');
+            } catch (err) {
+                addChatBubble('assistant', 'Assistant is temporarily unavailable. Please continue and wait for guard confirmation.');
+            } finally {
+                chatbotSendBtn.disabled = false;
+                chatbotInput.focus();
             }
         });
     </script>

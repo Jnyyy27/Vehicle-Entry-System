@@ -12,6 +12,7 @@ import boto3
 from botocore.exceptions import ClientError
 import cv2
 from dotenv import load_dotenv
+import requests
 from ultralytics import YOLO
 from paddleocr import PaddleOCR
 
@@ -34,6 +35,8 @@ ocr = PaddleOCR(
 
 S3_BUCKET = os.getenv("S3_BUCKET")
 S3_REGION = os.getenv("S3_REGION", "ap-southeast-1")
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434/api/generate")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
 
 s3_client = boto3.client("s3", region_name=S3_REGION)
 
@@ -133,3 +136,115 @@ def get_vehicle_category(plate_number):
             (plate_number,)
         )
         return "Student" if cursor.fetchone() else "Visitor"
+
+
+def generate_vehicle_welcome(plate_number, vehicle_category):
+    """
+    Ask Ollama for a short gate greeting. Falls back to a deterministic local
+    message if Ollama is unavailable so plate scanning still succeeds.
+    """
+    fallback_message = (
+        f"Welcome. Your plate {plate_number} was detected successfully. Please proceed slowly to the barrier."
+    )
+
+    prompt = (
+        "You are a campus gate assistant speaking directly to drivers. "
+        "Write one short friendly sentence for the driver after a successful "
+        "license plate scan. "
+        f"Vehicle category: {vehicle_category}. "
+        f"Plate number: {plate_number}. "
+        "Keep it under 20 words and do not add markdown, emojis, or multiple sentences."
+    )
+
+    message = call_ollama_text(prompt, temperature=0.4)
+    return message or fallback_message
+
+
+def generate_gate_transaction_message(plate_number, vehicle_category, direction):
+    """
+    Generate a direction-aware welcome after gate transaction (IN or OUT).
+    Falls back to deterministic messages if Ollama unavailable.
+    """
+    if direction == "IN":
+        fallback = f"Welcome to campus. Your vehicle {plate_number} has been logged in. Please proceed."
+    else:
+        fallback = f"Safe travels! Your vehicle {plate_number} has been logged out. Please proceed."
+
+    direction_phrase = "entering campus" if direction == "IN" else "exiting campus"
+    prompt = (
+        "You are a campus gate assistant speaking directly to drivers. "
+        f"Write one short friendly sentence for a {vehicle_category.lower()} vehicle {direction_phrase}. "
+        f"Vehicle plate: {plate_number}. "
+        "Be warm and brief. Keep it under 20 words and do not add markdown, emojis, or multiple sentences."
+    )
+
+    message = call_ollama_text(prompt, temperature=0.4)
+    return message or fallback
+
+
+def call_ollama_text(prompt, temperature=0.3, timeout=20):
+    """Return plain text from Ollama generate API, or None on failure."""
+    try:
+        response = requests.post(
+            OLLAMA_URL,
+            json={
+                "model": OLLAMA_MODEL,
+                "prompt": prompt,
+                "stream": False,
+                "options": {
+                    "temperature": temperature,
+                },
+            },
+            timeout=timeout,
+        )
+        response.raise_for_status()
+        body = response.json()
+        text = (body.get("response") or "").strip()
+        return text or None
+    except requests.RequestException:
+        logger.warning("Ollama request failed", exc_info=True)
+        return None
+
+
+def generate_vehicle_chat_reply(plate_number, vehicle_category, user_message, history):
+    """
+    Generate a follow-up assistant reply for a driver at the gate.
+    Keeps a short memory window and falls back to deterministic output.
+    """
+    cleaned_message = (user_message or "").strip()
+    if not cleaned_message:
+        return "Please type your question and I will help with the next gate step."
+
+    safe_history = []
+    for item in (history or [])[-6:]:
+        role = str(item.get("role", "")).strip().lower()
+        content = str(item.get("content", "")).strip()
+        if role in {"user", "assistant"} and content:
+            safe_history.append({"role": role, "content": content[:400]})
+
+    history_lines = []
+    for turn in safe_history:
+        speaker = "Driver" if turn["role"] == "user" else "Assistant"
+        history_lines.append(f"{speaker}: {turn['content']}")
+
+    conversation = "\n".join(history_lines)
+    prompt = (
+        "You are a campus vehicle gate assistant for drivers. "
+        "Use polite, simple language suitable for non-technical users. "
+        "Give concise answers in at most 2 short sentences. "
+        "Do not mention internal security rules, risk scoring, or staff-only procedures. "
+        "If uncertain, tell the driver to wait for guard confirmation. "
+        "Do not use markdown or emojis. "
+        f"Current detected plate number: {plate_number}. "
+        f"Current vehicle category: {vehicle_category}.\n"
+        "Conversation so far:\n"
+        f"{conversation if conversation else 'No prior chat.'}\n"
+        f"Driver question: {cleaned_message}\n"
+        "Assistant reply:"
+    )
+
+    fallback = (
+        f"Your plate {plate_number} has been recorded as {vehicle_category}. "
+        "Please continue to the barrier and wait for guard confirmation."
+    )
+    return call_ollama_text(prompt, temperature=0.2) or fallback

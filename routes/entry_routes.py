@@ -11,6 +11,8 @@ from services import (
     upload_to_s3,
     detect_plate,
     get_vehicle_category,
+    generate_vehicle_chat_reply,
+    generate_gate_transaction_message,
 )
 
 logger = logging.getLogger(__name__)
@@ -51,10 +53,27 @@ def entry():
                 VALUES (%s, %s, %s)
             """, (plate_number, vehicle_category, status))
 
-        flash(
-            f"{vehicle_category} vehicle {plate_number} recorded as {status}.",
-            "success"
+        transaction_message = (
+            f"{vehicle_category} vehicle {plate_number} recorded as {status}."
         )
+
+        # If AJAX request, return JSON with transaction details for chatbot
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            welcome_message = generate_gate_transaction_message(
+                plate_number=plate_number,
+                vehicle_category=vehicle_category,
+                direction=status,
+            )
+            return {
+                "success": True,
+                "plate_number": plate_number,
+                "vehicle_category": vehicle_category,
+                "direction": status,
+                "transaction_message": transaction_message,
+                "welcome_message": welcome_message,
+            }
+
+        flash(transaction_message, "success")
 
         return redirect(url_for("entry_bp.entry"))
 
@@ -107,3 +126,33 @@ def scan_plate():
     if s3_original_url:
         result["s3_url"] = s3_original_url
     return result
+
+
+@entry_bp.route("/api/assistant-chat", methods=["POST"])
+@login_required
+def assistant_chat():
+    """Chat endpoint for follow-up driver questions after a plate scan."""
+    payload = request.get_json(silent=True) or {}
+    plate_number = (payload.get("plate_number") or "").strip().upper()
+    vehicle_category = (payload.get("vehicle_category") or "").strip() or "Vehicle"
+    message = payload.get("message")
+    history = payload.get("history")
+
+    if not plate_number:
+        return {"error": "Missing plate_number"}, 400
+
+    if history is not None and not isinstance(history, list):
+        return {"error": "history must be a list"}, 400
+
+    reply = generate_vehicle_chat_reply(
+        plate_number=plate_number,
+        vehicle_category=vehicle_category,
+        user_message=message,
+        history=history,
+    )
+
+    return {
+        "reply": reply,
+        "plate_number": plate_number,
+        "vehicle_category": vehicle_category,
+    }
