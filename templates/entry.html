@@ -202,9 +202,24 @@
                     </svg>
                 </div>
                 <div>
-                    <p class="chatbot-eyebrow">Driver Assistant · Ollama</p>
+                    <p class="chatbot-eyebrow">Driver Assistant</p>
                     <h2 id="chatbotTitle">Driver Assistant</h2>
                 </div>
+                <button type="button" class="chatbot-tts-toggle" id="chatbotTtsBtn" aria-label="Mute voice output"
+                    title="Mute voice output">
+                    <svg id="ttsIconOn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                        <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+                    </svg>
+                    <svg id="ttsIconOff" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round" hidden>
+                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                        <line x1="23" y1="9" x2="17" y2="15" />
+                        <line x1="17" y1="9" x2="23" y2="15" />
+                    </svg>
+                </button>
             </div>
 
             <p class="chatbot-meta" id="chatbotMeta">Submit entry to receive direction-specific guidance.</p>
@@ -215,8 +230,18 @@
             </div>
 
             <form class="chatbot-input-row" id="chatbotForm" autocomplete="off">
+                <button type="button" class="chatbot-mic-btn" id="chatbotMicBtn" aria-label="Start voice input"
+                    title="Start voice input">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <rect x="9" y="2" width="6" height="11" rx="3" />
+                        <path d="M5 10a7 7 0 0 0 14 0" />
+                        <line x1="12" y1="19" x2="12" y2="22" />
+                        <line x1="8" y1="22" x2="16" y2="22" />
+                    </svg>
+                </button>
                 <input type="text" id="chatbotInput" placeholder="Ask, e.g. What should I do next?" maxlength="240">
-                <button type="submit" id="chatbotSendBtn">Send</button>
+                <button type="submit" class="chatbot-send-btn" id="chatbotSendBtn">Send</button>
             </form>
         </section>
 
@@ -252,9 +277,131 @@
         const chatbotForm = document.getElementById('chatbotForm');
         const chatbotInput = document.getElementById('chatbotInput');
         const chatbotSendBtn = document.getElementById('chatbotSendBtn');
+        const chatbotMicBtn = document.getElementById('chatbotMicBtn');
+        const chatbotTtsBtn = document.getElementById('chatbotTtsBtn');
+        const ttsIconOn = document.getElementById('ttsIconOn');
+        const ttsIconOff = document.getElementById('ttsIconOff');
 
         let activePlate = '';
         let activeCategory = '';
+        let ttsEnabled = true;
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const speechRecognitionSupported = Boolean(SpeechRecognition);
+        let recognition = null;
+        let listening = false;
+
+        function speak(text) {
+            if (!ttsEnabled || !window.speechSynthesis || !text) {
+                return;
+            }
+
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'en-US';
+            utterance.rate = 1;
+            utterance.pitch = 1;
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function refreshTtsControl() {
+            if (ttsEnabled) {
+                chatbotTtsBtn.classList.remove('muted');
+                chatbotTtsBtn.setAttribute('aria-label', 'Mute voice output');
+                chatbotTtsBtn.title = 'Mute voice output';
+                ttsIconOn.hidden = false;
+                ttsIconOff.hidden = true;
+                return;
+            }
+
+            chatbotTtsBtn.classList.add('muted');
+            chatbotTtsBtn.setAttribute('aria-label', 'Unmute voice output');
+            chatbotTtsBtn.title = 'Unmute voice output';
+            ttsIconOn.hidden = true;
+            ttsIconOff.hidden = false;
+        }
+
+        chatbotTtsBtn.addEventListener('click', () => {
+            ttsEnabled = !ttsEnabled;
+            if (!ttsEnabled && window.speechSynthesis) {
+                window.speechSynthesis.cancel();
+            }
+            refreshTtsControl();
+        });
+
+        function stopListening() {
+            if (!recognition || !listening) {
+                return;
+            }
+            recognition.stop();
+        }
+
+        if (speechRecognitionSupported) {
+            recognition = new SpeechRecognition();
+            recognition.lang = 'en-US';
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+            recognition.continuous = false;
+
+            recognition.addEventListener('result', (event) => {
+                const transcript = Array.from(event.results)
+                    .map((result) => result[0]?.transcript || '')
+                    .join(' ')
+                    .trim();
+
+                if (!transcript) {
+                    return;
+                }
+
+                chatbotInput.value = transcript;
+                chatbotForm.requestSubmit();
+            });
+
+            recognition.addEventListener('end', () => {
+                listening = false;
+                chatbotMicBtn.classList.remove('listening');
+                chatbotMicBtn.setAttribute('aria-label', 'Start voice input');
+                chatbotMicBtn.title = 'Start voice input';
+            });
+
+            recognition.addEventListener('error', () => {
+                listening = false;
+                chatbotMicBtn.classList.remove('listening');
+                chatbotMicBtn.setAttribute('aria-label', 'Start voice input');
+                chatbotMicBtn.title = 'Start voice input';
+            });
+
+            chatbotMicBtn.addEventListener('click', () => {
+                if (chatbotMicBtn.disabled) {
+                    return;
+                }
+
+                if (listening) {
+                    stopListening();
+                    return;
+                }
+
+                if (window.speechSynthesis) {
+                    window.speechSynthesis.cancel();
+                }
+
+                listening = true;
+                chatbotMicBtn.classList.add('listening');
+                chatbotMicBtn.setAttribute('aria-label', 'Stop voice input');
+                chatbotMicBtn.title = 'Stop voice input';
+                recognition.start();
+            });
+        } else {
+            chatbotMicBtn.hidden = true;
+        }
+
+        window.addEventListener('beforeunload', () => {
+            if (window.speechSynthesis) {
+                window.speechSynthesis.cancel();
+            }
+            stopListening();
+        });
+
+        refreshTtsControl();
 
         function addChatBubble(role, text) {
             const bubble = document.createElement('div');
@@ -262,6 +409,10 @@
             bubble.textContent = text;
             chatbotLog.appendChild(bubble);
             chatbotLog.scrollTop = chatbotLog.scrollHeight;
+
+            if (role === 'assistant') {
+                speak(text);
+            }
         }
 
         function ensureToastContainer() {
@@ -451,6 +602,7 @@
             addChatBubble('user', message);
             chatbotInput.value = '';
             chatbotSendBtn.disabled = true;
+            chatbotMicBtn.disabled = true;
 
             const history = Array.from(chatbotLog.querySelectorAll('.chatbot-bubble')).map((node) => {
                 return {
@@ -480,6 +632,7 @@
                 addChatBubble('assistant', 'Assistant is temporarily unavailable. Please continue and wait for guard confirmation.');
             } finally {
                 chatbotSendBtn.disabled = false;
+                chatbotMicBtn.disabled = !speechRecognitionSupported;
                 chatbotInput.focus();
             }
         });

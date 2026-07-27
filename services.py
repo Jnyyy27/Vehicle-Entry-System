@@ -191,8 +191,10 @@ def call_ollama_text(prompt, temperature=0.3, timeout=20):
                 "model": OLLAMA_MODEL,
                 "prompt": prompt,
                 "stream": False,
+                "keep_alive": "30m",
                 "options": {
                     "temperature": temperature,
+                    "num_predict": 50,
                 },
             },
             timeout=timeout,
