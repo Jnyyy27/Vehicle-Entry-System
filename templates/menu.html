@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menu &middot; Speed Burger</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/shared.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/menu.css') }}">
+</head>
+
+<body>
+    <div class="page">
+
+        <div class="topbar">
+            <div class="brand">
+                <div class="brand-mark">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path
+                            d="M5 17h14M5 17a2 2 0 1 0 4 0M15 17a2 2 0 1 0 4 0M5 17V11l1.6-4.4A2 2 0 0 1 8.5 5.3h7A2 2 0 0 1 17.4 6.6L19 11v6" />
+                    </svg>
+                </div>
+                <div class="brand-text">
+                    <span class="eyebrow">Speed Burger</span>
+                    <h1>Menu</h1>
+                </div>
+            </div>
+
+            <a class="back-link" href="/dashboard">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12" />
+                    <polyline points="12 19 5 12 12 5" />
+                </svg>
+                Dashboard
+            </a>
+        </div>
+
+        <p class="section-label">Browse the current menu</p>
+
+        <div class="tabs" id="categoryTabs">
+            <button class="tab active" data-category="all">All</button>
+            {% for category in categories %}
+            <button class="tab" data-category="{{ category }}">{{ category }}</button>
+            {% endfor %}
+        </div>
+
+        <div class="menu-grid" id="menuGrid">
+            {% for item in items %}
+            <div class="menu-card{% if not item.available %} unavailable{% endif %}"
+                data-category="{{ item.category }}">
+                <div class="menu-card-image">
+                    {% if item.image_url %}
+                    <img src="{{ item.image_url }}" alt="{{ item.name }}" loading="lazy">
+                    {% else %}
+                    <div class="no-image">No image</div>
+                    {% endif %}
+                    {% if not item.available %}
+                    <span class="sold-out-badge">Sold out</span>
+                    {% endif %}
+                    <span class="price-plate">RM {{ '%.2f'|format(item.price) }}</span>
+                </div>
+                <div class="menu-card-body">
+                    <span class="category-tag">{{ item.category }}</span>
+                    <h2>{{ item.name }}</h2>
+                    <p>{{ item.description }}</p>
+                </div>
+            </div>
+            {% else %}
+            <p class="empty-state">No menu items yet.</p>
+            {% endfor %}
+        </div>
+
+        <footer>Speed Burger &middot; Drive-Thru System</footer>
+    </div>
+
+    <script>
+        const tabs = document.querySelectorAll('#categoryTabs .tab');
+        const cards = document.querySelectorAll('#menuGrid .menu-card');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                const selected = tab.dataset.category;
+
+                cards.forEach(card => {
+                    const show = selected === 'all' || card.dataset.category === selected;
+                    card.style.display = show ? '' : 'none';
+                });
+            });
+        });
+    </script>
+</body>
+
+</html>

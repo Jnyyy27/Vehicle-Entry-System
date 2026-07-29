@@ -63,6 +63,26 @@
         <p class="section-label">Quick actions</p>
         <div class="grid">
 
+            <a class="action-card" href="/menu">
+                <div class="action-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M4 6h16M4 12h16M4 18h10" />
+                    </svg>
+                </div>
+                <div>
+                    <h2>Menu</h2>
+                    <p>Browse the current burgers, sides, and drinks on offer.</p>
+                </div>
+                <span class="go">Open
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                        <polyline points="12 5 19 12 12 19" />
+                    </svg>
+                </span>
+            </a>
+
             {% if session.user.role == "Admin" %}
             <a class="action-card" href="/vehicles">
                 <div class="action-icon">
