@@ -148,7 +148,7 @@
                         autocomplete="off" oninput="
                             const v = this.value.trim();
                             document.getElementById('platePreviewVal').textContent = v.toUpperCase() || '-- -- --';
-                            document.getElementById('platePreviewVal').classList.toggle('empty', !v);
+                            document.getElementById('platePreviewWrap').classList.toggle('empty', !v);
                         ">
                 </div>
 
@@ -202,8 +202,8 @@
                     </svg>
                 </div>
                 <div>
-                    <p class="chatbot-eyebrow">Driver Assistant</p>
-                    <h2 id="chatbotTitle">Driver Assistant</h2>
+                    <p class="chatbot-eyebrow">Drive-Thru Assistant</p>
+                    <h2 id="chatbotTitle">Speed Burger Assistant</h2>
                 </div>
                 <button type="button" class="chatbot-tts-toggle" id="chatbotTtsBtn" aria-label="Mute voice output"
                     title="Mute voice output">
@@ -222,10 +222,10 @@
                 </button>
             </div>
 
-            <p class="chatbot-meta" id="chatbotMeta">Submit entry to receive direction-specific guidance.</p>
+            <p class="chatbot-meta" id="chatbotMeta">Submit entry to start the Speed Burger drive-thru assistant.</p>
 
             <div class="chatbot-log" id="chatbotLog" aria-live="polite">
-                <div class="chatbot-bubble assistant">Hi. I will provide guidance after you submit this vehicle entry.
+                <div class="chatbot-bubble assistant">Welcome to Speed Burger!
                 </div>
             </div>
 
@@ -240,7 +240,7 @@
                         <line x1="8" y1="22" x2="16" y2="22" />
                     </svg>
                 </button>
-                <input type="text" id="chatbotInput" placeholder="Ask, e.g. What should I do next?" maxlength="240">
+                <input type="text" id="chatbotInput" placeholder="Ask, e.g. I want a burger combo" maxlength="240">
                 <button type="submit" class="chatbot-send-btn" id="chatbotSendBtn">Send</button>
             </form>
         </section>
@@ -499,8 +499,8 @@
                     msgBar.textContent = 'Detected: ' + data.plate.toUpperCase();
                     document.getElementById('plate_number').value = data.plate;
                     document.getElementById('platePreviewVal').textContent = data.plate.toUpperCase();
-                    document.getElementById('platePreviewVal').classList.remove('empty');
-                    chatbotMeta.textContent = 'Plate detected. Submit entry to receive AI guidance for IN or OUT.';
+                    document.getElementById('platePreviewWrap').classList.remove('empty');
+                    chatbotMeta.textContent = 'Plate detected. Submit entry to start your drive-thru order.';
                 } else {
                     msgBar.className = 'scan-result-msg err';
                     msgBar.textContent = data.error || 'Could not detect a plate number.';
@@ -548,34 +548,31 @@
                     return;
                 }
 
-                activePlate = (data.plate_number || '').toUpperCase();
-                activeCategory = data.vehicle_category || 'Vehicle';
-                const directionText = data.direction === 'IN' ? 'Entering campus' : 'Exiting campus';
+                const plate = (data.plate_number || '').toUpperCase();
+                const category = data.vehicle_category || 'Vehicle';
+                const direction = data.direction || 'IN';
+                const welcome = data.welcome_message || `Your vehicle has been logged as ${direction}.`;
 
-                chatbotLog.innerHTML = '';
-                chatbotMeta.textContent = `${directionText} · ${activePlate}`;
+                if (direction === 'OUT') {
+                    activePlate = plate;
+                    activeCategory = category;
+                    chatbotMeta.textContent = `Drive-thru checkout logged · ${activePlate}`;
+                    addChatBubble('assistant', welcome);
+                    showSuccessToast(data.transaction_message || `${category} vehicle ${plate} recorded as OUT.`);
+                    entryForm.reset();
+                    document.getElementById('platePreviewVal').textContent = '-- -- --';
+                    document.getElementById('platePreviewWrap').classList.add('empty');
+                    return;
+                }
 
-                const welcome = data.welcome_message || `Your vehicle has been logged as ${data.direction}.`;
-                addChatBubble('assistant', welcome);
-                showSuccessToast(data.transaction_message || `Vehicle ${activePlate} recorded as ${data.direction}.`);
-
-                // Reset form/scan UI after successful transaction so the next car starts fresh.
-                entryForm.reset();
-                document.getElementById('plate_number').value = '';
-                const platePreviewVal = document.getElementById('platePreviewVal');
-                platePreviewVal.textContent = '-- -- --';
-                platePreviewVal.classList.add('empty');
-
-                scanInput.value = '';
-                scanDetectBtn.disabled = true;
-                scanUploadArea.classList.remove('has-file');
-                scanPreviewImg.src = '';
-                scanPreviewWrap.style.display = 'none';
-
-                const msgBar = document.getElementById('scanResultMsg');
-                msgBar.style.display = 'none';
-                msgBar.textContent = '';
-                msgBar.className = 'scan-result-msg';
+                // Redirect to the menu page and pass chatbot seed data via query string
+                const params = new URLSearchParams({
+                    plate,
+                    category,
+                    direction,
+                    welcome,
+                });
+                window.location.href = '/menu?' + params.toString();
             } catch (err) {
                 chatbotMeta.textContent = 'Could not submit entry right now. Please try again.';
             } finally {
@@ -595,7 +592,7 @@
                 return;
             }
             if (!activePlate) {
-                chatbotMeta.textContent = 'Submit an entry first so I can reply based on IN or OUT status.';
+                chatbotMeta.textContent = 'Submit an entry first so I can help with your drive-thru order.';
                 return;
             }
 
@@ -629,7 +626,7 @@
                 const data = await res.json();
                 addChatBubble('assistant', data.reply || data.error || 'No response received.');
             } catch (err) {
-                addChatBubble('assistant', 'Assistant is temporarily unavailable. Please continue and wait for guard confirmation.');
+                addChatBubble('assistant', 'Connection issue right now. Please try again and continue your order here.');
             } finally {
                 chatbotSendBtn.disabled = false;
                 chatbotMicBtn.disabled = !speechRecognitionSupported;

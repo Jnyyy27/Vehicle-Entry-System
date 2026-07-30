@@ -135,8 +135,10 @@ def assistant_chat():
     payload = request.get_json(silent=True) or {}
     plate_number = (payload.get("plate_number") or "").strip().upper()
     vehicle_category = (payload.get("vehicle_category") or "").strip() or "Vehicle"
+    direction = (payload.get("direction") or "").strip().upper()
     message = payload.get("message")
     history = payload.get("history")
+    menu_items = payload.get("menu_items")  # optional list of {name, price, description, available}
 
     if not plate_number:
         return {"error": "Missing plate_number"}, 400
@@ -144,15 +146,21 @@ def assistant_chat():
     if history is not None and not isinstance(history, list):
         return {"error": "history must be a list"}, 400
 
+    if menu_items is not None and not isinstance(menu_items, list):
+        menu_items = None  # ignore malformed input
+
     reply = generate_vehicle_chat_reply(
         plate_number=plate_number,
         vehicle_category=vehicle_category,
         user_message=message,
         history=history,
+        direction=direction,
+        menu_items=menu_items,
     )
 
     return {
         "reply": reply,
         "plate_number": plate_number,
         "vehicle_category": vehicle_category,
+        "direction": direction,
     }

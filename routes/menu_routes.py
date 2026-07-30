@@ -4,6 +4,7 @@ import boto3
 from botocore.exceptions import ClientError
 from flask import Blueprint, render_template
 
+from auth import login_required
 from db import get_cursor
 
 # TODO: confirm these two names against whatever your config.py already
@@ -38,6 +39,7 @@ def get_menu_image_url(image_key):
 
 
 @menu_bp.route('/menu')
+@login_required
 def menu():
     with get_cursor(dict_cursor=True) as cursor:
         cursor.execute(

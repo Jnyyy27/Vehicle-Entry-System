@@ -7,6 +7,7 @@ route handlers stay thin and this logic is independently testable.
 import os
 import logging
 import uuid
+import re
 
 import boto3
 from botocore.exceptions import ClientError
@@ -41,6 +42,160 @@ OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
 s3_client = boto3.client("s3", region_name=S3_REGION)
 
 ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
+
+
+# Kept as a last-resort alias table when no DB menu is available
+ORDER_KEYWORDS = {
+    "burger": "burger",
+    "cheeseburger": "cheeseburger",
+    "fries": "fries",
+    "nuggets": "chicken nuggets",
+    "nugget": "chicken nuggets",
+    "chicken": "chicken",
+    "drink": "drink",
+    "coke": "coke",
+    "sprite": "sprite",
+    "water": "water",
+    "coffee": "coffee",
+    "tea": "tea",
+    "shake": "shake",
+    "sundae": "sundae",
+    "ice cream": "ice cream",
+    "combo": "combo meal",
+    "meal": "combo meal",
+}
+
+
+def _normalize_message(text):
+    return re.sub(r"\s+", " ", (text or "").strip().lower())
+
+
+def _extract_order_items(messages):
+    found = []
+    seen = set()
+    for msg in messages:
+        cleaned = _normalize_message(msg)
+        for keyword, label in ORDER_KEYWORDS.items():
+            if keyword in cleaned and label not in seen:
+                found.append(label)
+                seen.add(label)
+    return found
+
+
+def generate_local_order_reply(user_message, history, menu_items=None):
+    """Local fallback that still performs a useful order-taking conversation."""
+    cleaned = _normalize_message(user_message)
+    cleaned_words = set(cleaned.split())
+
+    prior_user_messages = [
+        str(item.get("content", ""))
+        for item in (history or [])
+        if str(item.get("role", "")).strip().lower() == "user"
+    ]
+
+    # Scan ALL turns (user + assistant) so items confirmed by the assistant
+    # (e.g. "Got it, Veggie Burger RM10.90") are counted in the running order.
+    all_turns_text = " ".join(
+        str(item.get("content", "")) for item in (history or [])
+    ) + " " + (user_message or "")
+    all_turns_text = all_turns_text.lower()
+
+    # --- Build price lookup ---------------------------------------------------
+    prices = {}
+    if menu_items:
+        for mi in menu_items:
+            prices[mi["name"]] = float(mi["price"])
+
+    # --- Detect accumulated order (full conversation) -------------------------
+    if menu_items:
+        items = [
+            mi["name"]
+            for mi in menu_items
+            if mi.get("available") and mi["name"].lower() in all_turns_text
+        ]
+    else:
+        items = _extract_order_items(prior_user_messages + [user_message or ""])
+
+    # --- Menu hint string -----------------------------------------------------
+    if menu_items:
+        avail_names = [mi["name"] for mi in menu_items if mi.get("available")]
+        menu_hint = ", ".join(avail_names[:4]) + (" and more" if len(avail_names) > 4 else "")
+    else:
+        menu_hint = "burgers and sides"
+
+    # --- Intent detection (whole-word checks) ---------------------------------
+    if not cleaned:
+        return "Welcome to Speed Burger! What would you like to order today?"
+
+    # Greeting
+    if cleaned_words & {"hi", "hello", "hey", "helo"}:
+        return f"Welcome to Speed Burger! We have {menu_hint}. What can I get for you today?"
+
+    if any(phrase in cleaned for phrase in ["good morning", "good afternoon", "good evening"]):
+        return f"Welcome to Speed Burger! We have {menu_hint}. What can I get for you today?"
+
+    # Dietary / recommendation queries
+    if any(word in cleaned for word in ["recommend", "suggest", "popular", "best", "what do you have"]) \
+            or re.search(r'\bmenu\b', cleaned):
+        if menu_items:
+            if any(w in cleaned for w in ["vegetarian", "veggie", "vegan", "no meat"]):
+                match = next((mi for mi in menu_items if mi.get("available") and "veggie" in mi["name"].lower()), None)
+                if match:
+                    return f"For vegetarians I recommend the {match['name']} at RM{prices[match['name']]:.2f}. Would you like to order that?"
+            if any(w in cleaned for w in ["spicy", "hot"]):
+                match = next((mi for mi in menu_items if mi.get("available") and "spicy" in mi["name"].lower()), None)
+                if match:
+                    return f"If you like spicy, try the {match['name']} at RM{prices[match['name']]:.2f}. Would you like that?"
+            if any(w in cleaned for w in ["fish", "seafood"]):
+                match = next((mi for mi in menu_items if mi.get("available") and "fish" in mi["name"].lower()), None)
+                if match:
+                    return f"We have the {match['name']} at RM{prices[match['name']]:.2f}. Would you like that?"
+        return f"Our menu includes {menu_hint}. Which one would you like to order?"
+
+    # Modification
+    if any(word in cleaned for word in ["remove", "cancel", "change", "edit"]):
+        if items:
+            return f"No problem. Your current order has {', '.join(items)}. What would you like to change?"
+        return "No problem. Tell me what you would like to order."
+
+    # Checkout
+    checkout_phrases = ["that is all", "thats all", "that's all", "nothing else",
+                        "no more", "that will be all", "i'm done", "im done", "no thanks"]
+    checkout_words = {"done", "checkout", "pay", "finish", "finished"}
+    if any(p in cleaned for p in checkout_phrases) or (cleaned_words & checkout_words):
+        if items:
+            summary = ", ".join(
+                f"{name} RM{prices[name]:.2f}" if name in prices else name
+                for name in items
+            )
+            return f"Got it! Your order is: {summary}. Thank you for choosing Speed Burger, have a great day!"
+        return "Please tell me your order items first before I can confirm."
+
+    # Check what items are in the CURRENT message specifically (new additions)
+    if menu_items:
+        current_items = [
+            mi["name"]
+            for mi in menu_items
+            if mi.get("available") and mi["name"].lower() in cleaned
+        ]
+    else:
+        current_items = _extract_order_items([user_message or ""])
+
+    if current_items:
+        confirmations = [
+            f"{name} RM{prices[name]:.2f}" if name in prices else name
+            for name in current_items
+        ]
+        return f"Got it, {', '.join(confirmations)}. Would you like to add anything else?"
+
+    # Order intent but item not found on menu
+    order_intent = {"want", "order", "get", "have", "add", "give", "take", "like"}
+    if cleaned_words & order_intent and menu_items:
+        return f"Sorry, we do not have that on our menu. We currently offer {menu_hint}. What would you like?"
+
+    if menu_items:
+        return f"I am not sure about that. We currently have {menu_hint}. What would you like?"
+    return "Please tell me your order item from the menu."
 
 
 def upload_to_s3(local_path, s3_key):
@@ -144,13 +299,13 @@ def generate_vehicle_welcome(plate_number, vehicle_category):
     message if Ollama is unavailable so plate scanning still succeeds.
     """
     fallback_message = (
-        f"Welcome. Your plate {plate_number} was detected successfully. Please proceed slowly to the barrier."
+        f"Welcome to Speed Burger! Plate {plate_number} is checked in. What would you like to order today?"
     )
 
     prompt = (
-        "You are a campus gate assistant speaking directly to drivers. "
-        "Write one short friendly sentence for the driver after a successful "
-        "license plate scan. "
+        "You are a Speed Burger drive-thru assistant speaking directly to drivers. "
+        "Write one short friendly sentence after a successful license plate scan. "
+        "Welcome the driver and invite them to place an order. "
         f"Vehicle category: {vehicle_category}. "
         f"Plate number: {plate_number}. "
         "Keep it under 20 words and do not add markdown, emojis, or multiple sentences."
@@ -166,56 +321,80 @@ def generate_gate_transaction_message(plate_number, vehicle_category, direction)
     Falls back to deterministic messages if Ollama unavailable.
     """
     if direction == "IN":
-        fallback = f"Welcome to campus. Your vehicle {plate_number} has been logged in. Please proceed."
+        fallback = "Welcome to Speed Burger! What would you like to order today?"
     else:
-        fallback = f"Safe travels! Your vehicle {plate_number} has been logged out. Please proceed."
+        fallback = "Thank you for visiting Speed Burger. Drive safe and come again next time!"
 
-    direction_phrase = "entering campus" if direction == "IN" else "exiting campus"
+    if direction == "IN":
+        instruction = "Welcome the driver warmly and ask what they would like to order today."
+    else:
+        instruction = "Thank the driver for visiting and invite them to come again next time."
+
     prompt = (
-        "You are a campus gate assistant speaking directly to drivers. "
-        f"Write one short friendly sentence for a {vehicle_category.lower()} vehicle {direction_phrase}. "
+        "You are a Speed Burger drive-thru assistant speaking directly to drivers. "
+        f"{instruction} "
         f"Vehicle plate: {plate_number}. "
-        "Be warm and brief. Keep it under 20 words and do not add markdown, emojis, or multiple sentences."
+        "Write exactly one short friendly sentence. "
+        "Keep it under 20 words. No markdown, no emojis, no extra sentences."
     )
 
     message = call_ollama_text(prompt, temperature=0.4)
     return message or fallback
 
 
-def call_ollama_text(prompt, temperature=0.3, timeout=20):
+def call_ollama_text(prompt, temperature=0.3, timeout=20, stop=None):
     """Return plain text from Ollama generate API, or None on failure."""
     try:
-        response = requests.post(
-            OLLAMA_URL,
-            json={
-                "model": OLLAMA_MODEL,
-                "prompt": prompt,
-                "stream": False,
-                "keep_alive": "30m",
-                "options": {
-                    "temperature": temperature,
-                    "num_predict": 50,
-                },
+        payload = {
+            "model": OLLAMA_MODEL,
+            "prompt": prompt,
+            "stream": False,
+            "keep_alive": "30m",
+            "options": {
+                "temperature": temperature,
+                "num_predict": 80,
             },
-            timeout=timeout,
-        )
+        }
+        if stop:
+            payload["options"]["stop"] = stop
+        response = requests.post(OLLAMA_URL, json=payload, timeout=timeout)
         response.raise_for_status()
         body = response.json()
         text = (body.get("response") or "").strip()
+        # Strip any leaked role prefixes the model may have continued writing
+        for prefix in ("Driver:", "Assistant:", "User:"):
+            if text.startswith(prefix):
+                text = text[len(prefix):].strip()
         return text or None
     except requests.RequestException:
         logger.warning("Ollama request failed", exc_info=True)
         return None
 
 
-def generate_vehicle_chat_reply(plate_number, vehicle_category, user_message, history):
+def generate_vehicle_chat_reply(plate_number, vehicle_category, user_message, history, direction="", menu_items=None):
     """
-    Generate a follow-up assistant reply for a driver at the gate.
-    Keeps a short memory window and falls back to deterministic output.
+    Generate a drive-thru ordering reply. Uses Ollama when available;
+    falls back to generate_local_order_reply which uses the real menu.
     """
     cleaned_message = (user_message or "").strip()
     if not cleaned_message:
-        return "Please type your question and I will help with the next gate step."
+        return "Please tell me what you would like to order."
+
+    direction = (direction or "").strip().upper()
+    goodbye_words = {
+        "bye", "bye bye", "goodbye", "see you", "see you later", "thanks", "thank you", "thankyou"
+    }
+
+    if direction == "OUT":
+        if any(word in _normalize_message(cleaned_message) for word in goodbye_words):
+            return (
+                f"Thank you for choosing Speed Burger, {plate_number}. "
+                "Come back and see us soon!"
+            )
+        return (
+            f"Thank you for choosing Speed Burger, {plate_number}. "
+            "Come back and see us soon!"
+        )
 
     safe_history = []
     for item in (history or [])[-6:]:
@@ -230,23 +409,37 @@ def generate_vehicle_chat_reply(plate_number, vehicle_category, user_message, hi
         history_lines.append(f"{speaker}: {turn['content']}")
 
     conversation = "\n".join(history_lines)
+
+    # Build menu block for the prompt
+    if menu_items:
+        menu_lines = [
+            f"- {mi['name']} RM{float(mi['price']):.2f} — {mi['description']}{' [SOLD OUT]' if not mi.get('available') else ''}"
+            for mi in menu_items
+        ]
+        menu_block = "Speed Burger menu:\n" + "\n".join(menu_lines)
+    else:
+        menu_block = "(menu not available)"
+
     prompt = (
-        "You are a campus vehicle gate assistant for drivers. "
-        "Use polite, simple language suitable for non-technical users. "
-        "Give concise answers in at most 2 short sentences. "
-        "Do not mention internal security rules, risk scoring, or staff-only procedures. "
-        "If uncertain, tell the driver to wait for guard confirmation. "
-        "Do not use markdown or emojis. "
-        f"Current detected plate number: {plate_number}. "
-        f"Current vehicle category: {vehicle_category}.\n"
+        "You are a Speed Burger drive-thru order-taking assistant. "
+        "Your ONLY job is to help the driver place a food order. "
+        "IMPORTANT rules:\n"
+        "- NEVER mention plate numbers, IN/OUT gate status, or farewell mid-conversation.\n"
+        "- If the session direction is OUT, always thank the driver and end the conversation.\n"
+        "- Only say goodbye/thank-you when the driver explicitly says they are done ordering or the session is OUT.\n"
+        "- Only recommend items that appear in the menu below. If the driver asks for something NOT on the menu, say: Sorry, we do not have that on our menu, then suggest a similar available item.\n"
+        "- When confirming a new item, always include its price (e.g. Got it, Veggie Burger RM10.90).\n"
+        "- When the driver says they are done, summarise ALL items ordered during the entire conversation with prices, then say thank you.\n"
+        "- If a driver asks about dietary options (vegetarian, spicy, fish, etc.), recommend the best matching menu item with its price.\n"
+        "- Reply in 1-2 short sentences. No markdown, no emojis.\n\n"
+        f"{menu_block}\n\n"
         "Conversation so far:\n"
-        f"{conversation if conversation else 'No prior chat.'}\n"
-        f"Driver question: {cleaned_message}\n"
-        "Assistant reply:"
+        f"{conversation if conversation else 'No prior exchanges.'}\n"
+        f"Driver: {cleaned_message}\n"
+        "Assistant:"
     )
 
-    fallback = (
-        f"Your plate {plate_number} has been recorded as {vehicle_category}. "
-        "Please continue to the barrier and wait for guard confirmation."
-    )
-    return call_ollama_text(prompt, temperature=0.2) or fallback
+    model_reply = call_ollama_text(prompt, temperature=0.2, stop=["Driver:", "\nDriver", "User:"])
+    if model_reply:
+        return model_reply
+    return generate_local_order_reply(cleaned_message, safe_history, menu_items)
