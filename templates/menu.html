@@ -132,6 +132,46 @@
         <footer>Speed Burger &middot; Drive-Thru System</footer>
     </div>
 
+    <!-- ── Order Summary Popup ──────────────────────────────────────── -->
+    <div class="order-summary-overlay" id="orderSummaryOverlay" role="dialog" aria-modal="true"
+        aria-labelledby="orderSummaryTitle" hidden>
+        <div class="order-summary-modal">
+            <div class="order-summary-header">
+                <div class="order-summary-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                </div>
+                <div>
+                    <p class="order-summary-eyebrow">Order Confirmed</p>
+                    <h2 id="orderSummaryTitle">Your Order Summary</h2>
+                </div>
+                <button type="button" class="order-summary-close" id="orderSummaryClose"
+                    aria-label="Close order summary">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+
+            <p class="order-summary-plate" id="orderSummaryPlate"></p>
+
+            <div class="order-summary-lines" id="orderSummaryLines"></div>
+
+            <div class="order-summary-total">
+                <span>Total</span>
+                <span id="orderSummaryTotal"></span>
+            </div>
+
+            <p class="order-summary-note">Your order is now being prepared. Please proceed to the collection window.</p>
+
+            <button type="button" class="order-summary-dismiss" id="orderSummaryDismiss">Got it!</button>
+        </div>
+    </div>
+
     <script id="menuData" type="application/json">{{ items | tojson }}</script>
 
     <script>
@@ -280,6 +320,48 @@
 
         refreshTtsControl();
 
+        // ── Order Summary Popup ──────────────────────────────────────────────
+        const orderOverlay = document.getElementById('orderSummaryOverlay');
+        const orderSummaryClose = document.getElementById('orderSummaryClose');
+        const orderSummaryDismiss = document.getElementById('orderSummaryDismiss');
+
+        function showOrderSummary(order) {
+            document.getElementById('orderSummaryPlate').textContent =
+                `Order #${order.order_id} \u00b7 Plate: ${activePlate}`;
+
+            const linesEl = document.getElementById('orderSummaryLines');
+            linesEl.innerHTML = '';
+            order.order_lines.forEach(item => {
+                const row = document.createElement('div');
+                row.className = 'order-line';
+                row.innerHTML =
+                    `<span class="order-line-name">${item.quantity}&times; ${item.name}</span>` +
+                    `<span class="order-line-price">RM ${item.subtotal.toFixed(2)}</span>`;
+                linesEl.appendChild(row);
+            });
+
+            document.getElementById('orderSummaryTotal').textContent =
+                `RM ${order.total_amount.toFixed(2)}`;
+
+            orderOverlay.hidden = false;
+            requestAnimationFrame(() => orderOverlay.classList.add('open'));
+            orderSummaryDismiss.focus();
+        }
+
+        function closeOrderSummary() {
+            orderOverlay.classList.remove('open');
+            setTimeout(() => { orderOverlay.hidden = true; }, 240);
+        }
+
+        orderSummaryClose.addEventListener('click', closeOrderSummary);
+        orderSummaryDismiss.addEventListener('click', closeOrderSummary);
+        orderOverlay.addEventListener('click', (e) => {
+            if (e.target === orderOverlay) closeOrderSummary();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !orderOverlay.hidden) closeOrderSummary();
+        });
+
         // ── Chat form submit ─────────────────────────────────────────────────
         chatbotForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -326,6 +408,11 @@
 
                 const data = await res.json();
                 addChatBubble('assistant', data.reply || data.error || 'No response received.');
+
+                // Show order summary popup when checkout is confirmed
+                if (data.order && data.order.checkout && data.order.saved && data.order.order_lines && data.order.order_lines.length > 0) {
+                    showOrderSummary(data.order);
+                }
             } catch {
                 addChatBubble('assistant', 'Connection issue right now. Please try again and continue your order here.');
             } finally {

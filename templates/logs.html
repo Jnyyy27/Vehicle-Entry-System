@@ -113,7 +113,6 @@
                             <tr>
                                 <th>ID</th>
                                 <th>Plate Number</th>
-                                <th>Category</th>
                                 <th>Status</th>
                                 <th>Time</th>
                             </tr>
@@ -124,22 +123,15 @@
                                 <td class="id-cell mono">{{ log[0] }}</td>
                                 <td class="plate-cell mono">{{ log[1] }}</td>
                                 <td>
-                                    {% if log[2] == 'Student' %}
-                                    <span class="badge student">Student</span>
+                                    {% if log[2] == 'IN' %}
+                                    <span class="badge entry">IN</span>
+                                    {% elif log[2] == 'OUT' %}
+                                    <span class="badge exit">OUT</span>
                                     {% else %}
-                                    <span class="badge visitor">Visitor</span>
+                                    <span class="badge neutral">{{ log[2] }}</span>
                                     {% endif %}
                                 </td>
-                                <td>
-                                    {% if log[3] == 'Entry' %}
-                                    <span class="badge entry">Entry</span>
-                                    {% elif log[3] == 'Exit' %}
-                                    <span class="badge exit">Exit</span>
-                                    {% else %}
-                                    <span class="badge neutral">{{ log[3] }}</span>
-                                    {% endif %}
-                                </td>
-                                <td class="time-cell mono">{{ log[4] }}</td>
+                                <td class="time-cell mono">{{ log[3] }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>

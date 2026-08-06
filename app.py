@@ -24,6 +24,8 @@ from routes.vehicles_routes import vehicles_bp
 from routes.logs_routes import logs_bp
 from routes.entry_routes import entry_bp
 from routes.menu_routes import menu_bp
+from routes.orders_routes import orders_bp
+
 
 app = Flask(__name__)
 
@@ -39,8 +41,8 @@ app.config.update(
     SESSION_COOKIE_SAMESITE="Lax",
 )
 
-# CSRF protection for all POST forms (vehicles.html / entry.html / edit-delete
-# forms need {{ csrf_token() }} added as a hidden field)
+# CSRF protection for all POST forms (entry.html / delete forms
+# need {{ csrf_token() }} added as a hidden field)
 csrf = CSRFProtect(app)
 
 app.register_blueprint(auth_bp)
@@ -49,6 +51,7 @@ app.register_blueprint(vehicles_bp)
 app.register_blueprint(logs_bp)
 app.register_blueprint(entry_bp)
 app.register_blueprint(menu_bp)
+app.register_blueprint(orders_bp)
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000, debug=False, threaded=False)

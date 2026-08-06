@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registered Vehicles ·  Speed Burger Drive-Thru System</title>
+    <title>Registered Vehicles · Speed Burger Drive-Thru System</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link
         href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap"
@@ -85,19 +85,11 @@
                     </svg>
                     Dashboard
                 </a>
-                <a class="btn-link solid" href="{{ url_for('vehicles_bp.vehicles') }}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <line x1="12" y1="5" x2="12" y2="19" />
-                        <line x1="5" y1="12" x2="19" y2="12" />
-                    </svg>
-                    Register Vehicle
-                </a>
             </div>
         </div>
 
         <div class="intro">
-            <p>All vehicles registered for gate access on campus.</p>
+            <p>All vehicles seen at the drive-thru, tracked automatically on entry.</p>
             <span class="count-pill">{{ vehicles|length }} registered</span>
         </div>
 
@@ -107,34 +99,23 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>Student Name</th>
-                            <th>Student ID</th>
                             <th>Plate Number</th>
-                            <th>Vehicle Type</th>
+                            <th>Owner Name</th>
+                            <th>Phone</th>
+                            <th>Total Visits</th>
+                            <th>Last Visit</th>
                             <th class="col-actions">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for vehicle in vehicles %}
                         <tr>
-                            <td class="cell-name">{{ vehicle.student_name }}</td>
-                            <td class="cell-id">{{ vehicle.student_id }}</td>
                             <td><span class="plate-chip">{{ vehicle.plate_number }}</span></td>
-                            <td><span class="type-chip">{{ vehicle.vehicle_type }}</span></td>
+                            <td class="cell-name">{{ vehicle.owner_name or '—' }}</td>
+                            <td class="cell-id">{{ vehicle.phone or '—' }}</td>
+                            <td>{{ vehicle.total_visits }}</td>
+                            <td class="time-cell mono">{{ vehicle.last_visit or '—' }}</td>
                             <td class="cell-actions">
-                                <button type="button" class="icon-btn edit" aria-label="Edit vehicle"
-                                    data-vehicle-id="{{ vehicle.vehicle_id }}"
-                                    data-student-name="{{ vehicle.student_name }}"
-                                    data-student-id="{{ vehicle.student_id }}"
-                                    data-plate-number="{{ vehicle.plate_number }}"
-                                    data-vehicle-type="{{ vehicle.vehicle_type }}"
-                                    onclick="openEditModal(this.dataset)">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-                                        stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M12 20h9" />
-                                        <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
-                                    </svg>
-                                </button>
                                 <button type="button" class="icon-btn delete" aria-label="Delete vehicle"
                                     data-vehicle-id="{{ vehicle.vehicle_id }}"
                                     data-plate-number="{{ vehicle.plate_number }}"
@@ -162,69 +143,13 @@
                             d="M5 17h14M5 17a2 2 0 1 0 4 0M15 17a2 2 0 1 0 4 0M5 17V11l1.6-4.4A2 2 0 0 1 8.5 5.3h7A2 2 0 0 1 17.4 6.6L19 11v6" />
                     </svg>
                 </div>
-                <h3>No vehicles registered yet</h3>
-                <p>Vehicles you register will show up here.</p>
-                <a class="btn-link solid" href="{{ url_for('vehicles_bp.vehicles') }}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <line x1="12" y1="5" x2="12" y2="19" />
-                        <line x1="5" y1="12" x2="19" y2="12" />
-                    </svg>
-                    Register a Vehicle
-                </a>
+                <h3>No vehicles seen yet</h3>
+                <p>Vehicles will appear here automatically after their first drive-thru entry.</p>
             </div>
             {% endif %}
         </div>
 
         <footer>Speed Burger &middot; Drive-Thru System</footer>
-    </div>
-
-    <!-- Edit modal -->
-    <div class="modal-overlay" id="editOverlay">
-        <div class="modal">
-            <div class="modal-head">
-                <h2>Edit Vehicle</h2>
-                <button type="button" class="modal-close" aria-label="Close" onclick="closeEditModal()">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <line x1="18" y1="6" x2="6" y2="18" />
-                        <line x1="6" y1="6" x2="18" y2="18" />
-                    </svg>
-                </button>
-            </div>
-
-            <form id="editForm" method="POST" action="">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div class="field">
-                    <label for="edit_student_name">Student Name</label>
-                    <input type="text" id="edit_student_name" name="student_name" required>
-                </div>
-                <div class="field">
-                    <label for="edit_student_id">Student ID</label>
-                    <input type="text" id="edit_student_id" name="student_id" required>
-                </div>
-                <div class="field">
-                    <label for="edit_plate_number">Plate Number</label>
-                    <input type="text" id="edit_plate_number" name="plate_number" required>
-                </div>
-                <div class="field">
-                    <label for="edit_vehicle_type">Vehicle Type</label>
-                    <select id="edit_vehicle_type" name="vehicle_type" required>
-                        <option value="Car">Car</option>
-                        <option value="Motorcycle">Motorcycle</option>
-                        <option value="Van">Van</option>
-                        <option value="Pickup Truck">Pickup Truck</option>
-                        <option value="Bicycle">Bicycle</option>
-                        <option value="Other">Other</option>
-                    </select>
-                </div>
-
-                <div class="modal-actions">
-                    <button type="button" class="btn-cancel" onclick="closeEditModal()">Cancel</button>
-                    <button type="submit" class="btn-save">Save Changes</button>
-                </div>
-            </form>
-        </div>
     </div>
 
     <!-- Delete confirm modal -->
@@ -252,23 +177,10 @@
     </div>
 
     <script>
-        function openEditModal(data) {
-            document.getElementById('editForm').action = '/vehicles/edit/' + data.vehicleId;
-            document.getElementById('edit_student_name').value = data.studentName;
-            document.getElementById('edit_student_id').value = data.studentId;
-            document.getElementById('edit_plate_number').value = data.plateNumber;
-            document.getElementById('edit_vehicle_type').value = data.vehicleType;
-            document.getElementById('editOverlay').classList.add('open');
-        }
-
-        function closeEditModal() {
-            document.getElementById('editOverlay').classList.remove('open');
-        }
-
         function openDeleteModal(data) {
             document.getElementById('deleteForm').action = '/vehicles/delete/' + data.vehicleId;
             document.getElementById('deleteConfirmText').textContent =
-                'This will permanently remove ' + data.plateNumber + ' from registered vehicles.';
+                'This will permanently remove ' + data.plateNumber + ' from the vehicle records.';
             document.getElementById('deleteOverlay').classList.add('open');
         }
 
@@ -276,20 +188,12 @@
             document.getElementById('deleteOverlay').classList.remove('open');
         }
 
-        // Close modals when clicking the dark overlay
-        document.getElementById('editOverlay').addEventListener('click', function (e) {
-            if (e.target === this) closeEditModal();
-        });
         document.getElementById('deleteOverlay').addEventListener('click', function (e) {
             if (e.target === this) closeDeleteModal();
         });
 
-        // Close modals with Escape key
         document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') {
-                closeEditModal();
-                closeDeleteModal();
-            }
+            if (e.key === 'Escape') closeDeleteModal();
         });
     </script>
 

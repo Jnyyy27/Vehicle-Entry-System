@@ -1,6 +1,6 @@
 """
 Business logic that isn't route handling: plate detection (YOLO + PaddleOCR),
-S3 uploads, and the student/visitor lookup. Kept separate from routes so
+S3 uploads, and drive-thru ordering. Kept separate from routes so
 route handlers stay thin and this logic is independently testable.
 """
 
@@ -138,6 +138,34 @@ def generate_local_order_reply(user_message, history, menu_items=None):
     if any(word in cleaned for word in ["recommend", "suggest", "popular", "best", "what do you have"]) \
             or re.search(r'\bmenu\b', cleaned):
         if menu_items:
+            # Signature burger query
+            if any(w in cleaned for w in ["signature", "special", "original", "classic"]):
+                match = next((mi for mi in menu_items if mi.get("available") and "classic" in mi["name"].lower()), None)
+                if match:
+                    return (
+                        f"Our signature burger is the {match['name']} at RM{prices[match['name']]:.2f}. "
+                        "A perfectly seared beef patty with fresh toppings on a toasted bun. Would you like to order that?"
+                    )
+
+            # General burger recommendation
+            if any(w in cleaned for w in ["burger", "burgers"]):
+                burger_picks = [
+                    mi for mi in menu_items
+                    if mi.get("available") and "burger" in mi["name"].lower()
+                ]
+                if burger_picks:
+                    # Always lead with Speed Classic Burger, then add up to 2 more
+                    classic = next((mi for mi in burger_picks if "classic" in mi["name"].lower()), None)
+                    others = [mi for mi in burger_picks if mi is not classic][:2]
+                    picks = ([classic] if classic else []) + others
+                    pick_str = ", ".join(
+                        f"{mi['name']} RM{prices[mi['name']]:.2f}" for mi in picks
+                    )
+                    return (
+                        f"For burgers I recommend the {pick_str}. "
+                        "Which one would you like?"
+                    )
+
             if any(w in cleaned for w in ["vegetarian", "veggie", "vegan", "no meat"]):
                 match = next((mi for mi in menu_items if mi.get("available") and "veggie" in mi["name"].lower()), None)
                 if match:
@@ -150,6 +178,14 @@ def generate_local_order_reply(user_message, history, menu_items=None):
                 match = next((mi for mi in menu_items if mi.get("available") and "fish" in mi["name"].lower()), None)
                 if match:
                     return f"We have the {match['name']} at RM{prices[match['name']]:.2f}. Would you like that?"
+
+            # Generic recommendation — lead with Speed Classic Burger
+            classic = next((mi for mi in menu_items if mi.get("available") and "classic" in mi["name"].lower()), None)
+            if classic:
+                return (
+                    f"I recommend starting with our {classic['name']} at RM{prices[classic['name']]:.2f}. "
+                    f"We also have {menu_hint}. What would you like?"
+                )
         return f"Our menu includes {menu_hint}. Which one would you like to order?"
 
     # Modification
@@ -186,7 +222,7 @@ def generate_local_order_reply(user_message, history, menu_items=None):
             f"{name} RM{prices[name]:.2f}" if name in prices else name
             for name in current_items
         ]
-        return f"Got it, {', '.join(confirmations)}. Would you like to add anything else?"
+        return f"Got it, {', '.join(confirmations)}. Would you like anything else?"
 
     # Order intent but item not found on menu
     order_intent = {"want", "order", "get", "have", "add", "give", "take", "like"}
@@ -284,50 +320,16 @@ def detect_plate(image_path):
     return plate_text if plate_text else None
 
 
-def get_vehicle_category(plate_number):
-    with get_cursor() as cursor:
-        cursor.execute(
-            "SELECT 1 FROM vehicles WHERE plate_number = %s LIMIT 1",
-            (plate_number,)
-        )
-        return "Student" if cursor.fetchone() else "Visitor"
-
-
-def generate_vehicle_welcome(plate_number, vehicle_category):
-    """
-    Ask Ollama for a short gate greeting. Falls back to a deterministic local
-    message if Ollama is unavailable so plate scanning still succeeds.
-    """
-    fallback_message = (
-        f"Welcome to Speed Burger! Plate {plate_number} is checked in. What would you like to order today?"
-    )
-
-    prompt = (
-        "You are a Speed Burger drive-thru assistant speaking directly to drivers. "
-        "Write one short friendly sentence after a successful license plate scan. "
-        "Welcome the driver and invite them to place an order. "
-        f"Vehicle category: {vehicle_category}. "
-        f"Plate number: {plate_number}. "
-        "Keep it under 20 words and do not add markdown, emojis, or multiple sentences."
-    )
-
-    message = call_ollama_text(prompt, temperature=0.4)
-    return message or fallback_message
-
-
-def generate_gate_transaction_message(plate_number, vehicle_category, direction):
+def generate_gate_transaction_message(plate_number, direction):
     """
     Generate a direction-aware welcome after gate transaction (IN or OUT).
     Falls back to deterministic messages if Ollama unavailable.
     """
     if direction == "IN":
         fallback = "Welcome to Speed Burger! What would you like to order today?"
-    else:
-        fallback = "Thank you for visiting Speed Burger. Drive safe and come again next time!"
-
-    if direction == "IN":
         instruction = "Welcome the driver warmly and ask what they would like to order today."
     else:
+        fallback = "Thank you for visiting Speed Burger. Drive safe and come again next time!"
         instruction = "Thank the driver for visiting and invite them to come again next time."
 
     prompt = (
@@ -352,7 +354,7 @@ def call_ollama_text(prompt, temperature=0.3, timeout=20, stop=None):
             "keep_alive": "30m",
             "options": {
                 "temperature": temperature,
-                "num_predict": 80,
+                "num_predict": 120,
             },
         }
         if stop:
@@ -371,10 +373,60 @@ def call_ollama_text(prompt, temperature=0.3, timeout=20, stop=None):
         return None
 
 
-def generate_vehicle_chat_reply(plate_number, vehicle_category, user_message, history, direction="", menu_items=None):
+def _get_current_order_summary(plate_number):
     """
-    Generate a drive-thru ordering reply. Uses Ollama when available;
-    falls back to generate_local_order_reply which uses the real menu.
+    Return the confirmed order lines for this plate as a plain-text string,
+    e.g. "2x Speed Classic Burger RM9.90, 1x Spicy Chicken Burger RM13.90".
+    Returns an empty string when no active order exists or on any DB error.
+    """
+    try:
+        with get_cursor(dict_cursor=True) as cursor:
+            cursor.execute(
+                """
+                SELECT o.order_id
+                FROM orders o
+                INNER JOIN vehicles v ON v.vehicle_id = o.vehicle_id
+                WHERE v.plate_number = %s AND o.status IN ('Pending', 'Preparing')
+                ORDER BY o.order_id DESC LIMIT 1
+                """,
+                (plate_number,),
+            )
+            order_row = cursor.fetchone()
+            if not order_row:
+                return ""
+
+            cursor.execute(
+                """
+                SELECT mi.name, oi.quantity, oi.unit_price
+                FROM order_items oi
+                INNER JOIN menu_items mi ON mi.menu_id = oi.menu_id
+                WHERE oi.order_id = %s
+                ORDER BY oi.order_item_id ASC
+                """,
+                (int(order_row["order_id"]),),
+            )
+            lines = cursor.fetchall() or []
+            if not lines:
+                return ""
+
+            parts = [
+                f"{int(row['quantity'])}x {row['name']} RM{float(row['unit_price']):.2f}"
+                for row in lines
+            ]
+            return ", ".join(parts)
+    except Exception:
+        logger.debug("Could not fetch current order for plate %s", plate_number, exc_info=True)
+        return ""
+
+
+def generate_vehicle_chat_reply(plate_number, user_message, history, direction="", menu_items=None,
+                                items_just_added=None, checkout_requested=False, checkout_order_lines=None,
+                                order_not_found=False):
+    """
+    Generate a drive-thru ordering reply.
+    - Item confirmations and checkout summaries are built deterministically (no LLM).
+    - Ollama is called only for Q&A turns: greetings, recommendations, unknown queries.
+    Falls back to generate_local_order_reply when Ollama is unavailable.
     """
     cleaned_message = (user_message or "").strip()
     if not cleaned_message:
@@ -410,36 +462,81 @@ def generate_vehicle_chat_reply(plate_number, vehicle_category, user_message, hi
 
     conversation = "\n".join(history_lines)
 
+    # ------------------------------------------------------------------ #
+    # DETERMINISTIC PATH 1: item confirmation                            #
+    # Always accurate — never let the LLM recount quantities.            #
+    # ------------------------------------------------------------------ #
+    if items_just_added and not checkout_requested:
+        parts = [
+            f"{int(it['quantity'])}x {it['name']} RM{float(it['unit_price']):.2f}"
+            for it in items_just_added
+        ]
+        return ", ".join(parts) + ". Would you like anything else?"
+
+    # ------------------------------------------------------------------ #
+    # DETERMINISTIC PATH 2: checkout summary                             #
+    # Read from DB-confirmed order_lines so the summary is always exact. #
+    # ------------------------------------------------------------------ #
+    if checkout_requested:
+        lines = checkout_order_lines or []
+        if lines:
+            parts = [
+                f"{int(row['quantity'])}x {row['name']} RM{float(row['unit_price']):.2f}"
+                for row in lines
+            ]
+            return "Your order: " + ", ".join(parts) + ". Thank you for choosing Speed Burger!"
+        return "Thank you for choosing Speed Burger! Have a great day."
+
+    # ------------------------------------------------------------------ #
+    # DETERMINISTIC PATH 3: item not found on menu                       #
+    # Prevents Ollama from faking an order confirmation.                 #
+    # ------------------------------------------------------------------ #
+    if order_not_found:
+        if menu_items:
+            avail = [mi["name"] for mi in menu_items if mi.get("available")]
+            hint = ", ".join(avail[:3]) + (" and more" if len(avail) > 3 else "")
+            return f"Sorry, I don't have that on our menu. We have {hint}. What would you like?"
+        return "Sorry, I don't have that item on our menu. What would you like to order?"
+
+    # ------------------------------------------------------------------ #
+    # OLLAMA PATH: Q&A turns (greetings, recommendations, queries)       #
+    # ------------------------------------------------------------------ #
+
     # Build menu block for the prompt
     if menu_items:
         menu_lines = [
-            f"- {mi['name']} RM{float(mi['price']):.2f} — {mi['description']}{' [SOLD OUT]' if not mi.get('available') else ''}"
+            f"- {mi['name']} RM{float(mi['price']):.2f}{' [SOLD OUT]' if not mi.get('available') else ''}"
             for mi in menu_items
         ]
-        menu_block = "Speed Burger menu:\n" + "\n".join(menu_lines)
+        menu_block = "Speed Burger menu (name and unit price):\n" + "\n".join(menu_lines)
     else:
         menu_block = "(menu not available)"
 
+    confirmed_order = _get_current_order_summary(plate_number)
+    order_context = (
+        f"Confirmed order so far: {confirmed_order}"
+        if confirmed_order
+        else "Confirmed order so far: nothing ordered yet."
+    )
+
     prompt = (
         "You are a Speed Burger drive-thru order-taking assistant. "
-        "Your ONLY job is to help the driver place a food order. "
-        "IMPORTANT rules:\n"
-        "- NEVER mention plate numbers, IN/OUT gate status, or farewell mid-conversation.\n"
-        "- If the session direction is OUT, always thank the driver and end the conversation.\n"
-        "- Only say goodbye/thank-you when the driver explicitly says they are done ordering or the session is OUT.\n"
-        "- Only recommend items that appear in the menu below. If the driver asks for something NOT on the menu, say: Sorry, we do not have that on our menu, then suggest a similar available item.\n"
-        "- When confirming a new item, always include its price (e.g. Got it, Veggie Burger RM10.90).\n"
-        "- When the driver says they are done, summarise ALL items ordered during the entire conversation with prices, then say thank you.\n"
-        "- If a driver asks about dietary options (vegetarian, spicy, fish, etc.), recommend the best matching menu item with its price.\n"
-        "- Reply in 1-2 short sentences. No markdown, no emojis.\n\n"
+        "Your ONLY job is to answer the driver's question or make a recommendation.\n"
+        "RULES:\n"
+        "1. Do NOT take orders or confirm quantities in this reply — order saving is handled separately.\n"
+        "2. For menu/recommendation questions, suggest 1-2 items by name and unit price.\n"
+        "3. For signature/classic queries, recommend Speed Classic Burger with a brief description.\n"
+        "4. Only recommend items on the menu. If not listed, apologise and suggest the closest match.\n"
+        "5. Reply in 1-2 short sentences. No markdown, no emojis, no plate numbers.\n\n"
         f"{menu_block}\n\n"
+        f"{order_context}\n\n"
         "Conversation so far:\n"
         f"{conversation if conversation else 'No prior exchanges.'}\n"
         f"Driver: {cleaned_message}\n"
         "Assistant:"
     )
 
-    model_reply = call_ollama_text(prompt, temperature=0.2, stop=["Driver:", "\nDriver", "User:"])
+    model_reply = call_ollama_text(prompt, temperature=0.15, stop=["Driver:", "\nDriver", "User:"])
     if model_reply:
         return model_reply
     return generate_local_order_reply(cleaned_message, safe_history, menu_items)

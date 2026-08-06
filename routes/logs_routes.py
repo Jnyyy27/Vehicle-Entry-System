@@ -11,7 +11,7 @@ logs_bp = Blueprint("logs_bp", __name__)
 def logs():
     with get_cursor() as cursor:
         cursor.execute("""
-            SELECT id, plate_number, vehicle_category, status, entry_time
+            SELECT id, plate_number, status, entry_time
             FROM entry_logs
             ORDER BY id DESC
         """)

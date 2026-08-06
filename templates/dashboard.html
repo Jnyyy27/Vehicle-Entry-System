@@ -83,29 +83,6 @@
                 </span>
             </a>
 
-            {% if session.user.role == "Admin" %}
-            <a class="action-card" href="/vehicles">
-                <div class="action-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <path
-                            d="M5 17h14M5 17a2 2 0 1 0 4 0M15 17a2 2 0 1 0 4 0M5 17V11l1.6-4.4A2 2 0 0 1 8.5 5.3h7A2 2 0 0 1 17.4 6.6L19 11v6" />
-                    </svg>
-                </div>
-                <div>
-                    <h2>Vehicle Registration</h2>
-                    <p>Register a new vehicle or update an existing record.</p>
-                </div>
-                <span class="go">Open
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <line x1="5" y1="12" x2="19" y2="12" />
-                        <polyline points="12 5 19 12 12 19" />
-                    </svg>
-                </span>
-            </a>
-            {% endif %}
-
             <a class="action-card" href="/entry">
                 <div class="action-icon">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
@@ -142,6 +119,28 @@
                 <div>
                     <h2>Entry Logs</h2>
                     <p>Review recent gate entry and exit history.</p>
+                </div>
+                <span class="go">Open
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                        <polyline points="12 5 19 12 12 19" />
+                    </svg>
+                </span>
+            </a>
+
+            <a class="action-card" href="/orders/display">
+                <div class="action-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <rect x="3" y="4" width="18" height="16" rx="2" />
+                        <line x1="7" y1="9" x2="17" y2="9" />
+                        <line x1="7" y1="13" x2="13" y2="13" />
+                    </svg>
+                </div>
+                <div>
+                    <h2>Order Display</h2>
+                    <p>Monitor current drive-thru queue and service load in real time.</p>
                 </div>
                 <span class="go">Open
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
