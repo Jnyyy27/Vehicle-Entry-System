@@ -9,7 +9,7 @@ from functools import wraps
 import jwt
 from jwt import PyJWKClient
 from dotenv import load_dotenv
-from flask import session, redirect, render_template
+from flask import g, request, session, redirect, render_template
 
 load_dotenv()
 
@@ -61,29 +61,69 @@ def role_from_groups(groups):
     return "User"
 
 
+def _build_session_user(claims):
+    groups = claims.get("cognito:groups", [])
+    return {
+        "email": claims["email"],
+        "sub": claims["sub"],
+        "role": role_from_groups(groups),
+    }
+
+
+def _bearer_token_from_request():
+    auth_header = (request.headers.get("Authorization") or "").strip()
+    if not auth_header:
+        return None
+
+    parts = auth_header.split(" ", 1)
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        return None
+
+    token = parts[1].strip()
+    return token or None
+
+
+def get_api_user():
+    """
+    Resolve an authenticated user for API calls.
+    Supports either:
+    1) Flask session id_token (web)
+    2) Authorization: Bearer <id_token> (mobile/web)
+
+    Returns a user dict or None.
+    """
+    token = session.get("id_token")
+    token_source = "session"
+    if not token:
+        token = _bearer_token_from_request()
+        token_source = "bearer"
+
+    if not token:
+        return None
+
+    try:
+        claims = verify_id_token(token)
+    except jwt.InvalidTokenError:
+        if token_source == "session":
+            session.clear()
+        return None
+
+    user = _build_session_user(claims)
+
+    # Keep legacy server-rendered routes working by refreshing session user
+    # when a session token is present.
+    if token_source == "session":
+        session["user"] = user
+
+    return user
+
+
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
 
-        token = session.get("id_token")
-
-        if not token:
-            return redirect("/login")
-
-        try:
-            user = verify_id_token(token)
-
-            # IMPORTANT: rebuild session user every request
-            groups = user.get("cognito:groups", [])
-
-            session["user"] = {
-                "email": user["email"],
-                "sub": user["sub"],
-                "role": role_from_groups(groups),
-            }
-
-        except jwt.InvalidTokenError:
-            session.clear()
+        user = get_api_user()
+        if not user:
             return redirect("/login")
 
         return f(*args, **kwargs)
@@ -97,4 +137,35 @@ def admin_required(f):
         if session.get("user", {}).get("role") != "Admin":
             return render_template("403.html"), 403
         return f(*args, **kwargs)
+    return decorated
+
+
+def api_login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        user = get_api_user()
+        if not user:
+            return {"error": "unauthorized"}, 401
+
+        g.api_user = user
+        return f(*args, **kwargs)
+
+    return decorated
+
+
+def api_admin_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        user = getattr(g, "api_user", None)
+        if not user:
+            user = get_api_user()
+            if not user:
+                return {"error": "unauthorized"}, 401
+            g.api_user = user
+
+        if user.get("role") != "Admin":
+            return {"error": "forbidden"}, 403
+
+        return f(*args, **kwargs)
+
     return decorated

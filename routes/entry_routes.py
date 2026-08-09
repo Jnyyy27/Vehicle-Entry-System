@@ -5,7 +5,7 @@ import re
 
 from flask import Blueprint, request, redirect, render_template, flash, url_for
 
-from auth import login_required
+from auth import api_login_required, login_required
 from db import get_cursor
 from services import (
     ALLOWED_IMAGE_TYPES,
@@ -273,83 +273,110 @@ def _persist_order_from_chat(plate_number, user_message):
         }
 
 
-@entry_bp.route("/entry", methods=["GET", "POST"])
-@login_required
-def entry():
+def _record_entry_transaction(plate_number):
+    plate_number = (plate_number or "").strip().upper()
+    if not plate_number:
+        return None
 
-    if request.method == "POST":
-        plate_number = request.form["plate_number"]
-
-        with get_cursor(commit=True) as cursor:
-            # FOR UPDATE locks the matching row(s) for the duration of this
-            # transaction so two near-simultaneous scans of the same plate
-            # can't both read "no prior log" / "last was IN" and both insert
-            # "IN". Requires the entry_logs table to use InnoDB.
-            cursor.execute("""
+    with get_cursor(commit=True) as cursor:
+        # Lock last row for this plate to avoid duplicate IN/OUT race conditions.
+        cursor.execute(
+            """
                 SELECT status
                 FROM entry_logs
                 WHERE plate_number = %s
                 ORDER BY entry_time DESC
                 LIMIT 1
                 FOR UPDATE
-            """, (plate_number,))
+            """,
+            (plate_number,),
+        )
 
-            last_log = cursor.fetchone()
-            status = "OUT" if last_log and last_log[0] == "IN" else "IN"
+        last_log = cursor.fetchone()
+        status = "OUT" if last_log and last_log[0] == "IN" else "IN"
 
-            cursor.execute("""
+        cursor.execute(
+            """
                 INSERT INTO entry_logs
                 (plate_number, status)
                 VALUES (%s, %s)
-            """, (plate_number, status))
+            """,
+            (plate_number, status),
+        )
 
-            # Auto-upsert into vehicles: create on first visit, increment
-            # total_visits and update last_visit on every IN scan.
-            if status == "IN":
-                cursor.execute("""
+        if status == "IN":
+            cursor.execute(
+                """
                     INSERT INTO vehicles (plate_number, total_visits, last_visit)
                     VALUES (%s, 1, NOW())
                     ON DUPLICATE KEY UPDATE
                         total_visits = total_visits + 1,
                         last_visit   = NOW()
-                """, (plate_number,))
+                """,
+                (plate_number,),
+            )
 
-                # Cancel any stale Pending/Preparing orders from a previous session
-                # so the new drive-thru session always starts with a clean slate.
-                cursor.execute("""
+            # Cancel any stale orders from a previous drive-thru session.
+            cursor.execute(
+                """
                     UPDATE orders o
                     INNER JOIN vehicles v ON v.vehicle_id = o.vehicle_id
                     SET o.status = 'Cancelled'
                     WHERE v.plate_number = %s AND o.status IN ('Pending', 'Preparing')
-                """, (plate_number,))
+                """,
+                (plate_number,),
+            )
 
-        transaction_message = f"Vehicle {plate_number} recorded as {status}."
+    transaction_message = f"Vehicle {plate_number} recorded as {status}."
+    welcome_message = generate_gate_transaction_message(
+        plate_number=plate_number,
+        direction=status,
+    )
+
+    return {
+        "success": True,
+        "plate_number": plate_number,
+        "direction": status,
+        "transaction_message": transaction_message,
+        "welcome_message": welcome_message,
+    }
+
+
+@entry_bp.route("/entry", methods=["GET", "POST"])
+@login_required
+def entry():
+
+    if request.method == "POST":
+        result = _record_entry_transaction(request.form.get("plate_number"))
+        if not result:
+            flash("Plate number is required.", "error")
+            return redirect(url_for("entry_bp.entry"))
 
         # If AJAX request, return JSON with transaction details for chatbot
         if request.headers.get("X-Requested-With") == "XMLHttpRequest":
-            welcome_message = generate_gate_transaction_message(
-                plate_number=plate_number,
-                direction=status,
-            )
-            return {
-                "success": True,
-                "plate_number": plate_number,
-                "direction": status,
-                "transaction_message": transaction_message,
-                "welcome_message": welcome_message,
-            }
+            return result
 
-        flash(transaction_message, "success")
+        flash(result["transaction_message"], "success")
 
         return redirect(url_for("entry_bp.entry"))
 
     return render_template("entry.html")
 
 
-@entry_bp.route("/scan-plate", methods=["POST"])
-@entry_bp.route("/api/detect-plate", methods=["POST"])
-@login_required
-def scan_plate():
+@entry_bp.route("/api/entry", methods=["POST"])
+@api_login_required
+def submit_entry_api():
+    payload = request.get_json(silent=True) or {}
+    plate_number = payload.get("plate_number")
+    result = _record_entry_transaction(plate_number)
+
+    if not result:
+        return {"error": "Missing plate_number"}, 400
+
+    return result
+
+
+def _scan_plate_impl():
     """Accept an image upload, run YOLO + PaddleOCR, return detected plate."""
     if "image" not in request.files:
         return {"error": "No image provided"}, 400
@@ -359,8 +386,27 @@ def scan_plate():
     if not file or file.filename == "":
         return {"error": "No file selected"}, 400
 
-    if file.content_type not in ALLOWED_IMAGE_TYPES:
-        return {"error": "Invalid file type. Use JPEG, PNG or WebP."}, 400
+    raw_content_type = (file.content_type or "").strip().lower()
+    normalized_content_type = raw_content_type.split(";", 1)[0]
+    filename = (file.filename or "").strip().lower()
+    extension_allowed = filename.endswith((".jpg", ".jpeg", ".png", ".webp"))
+
+    # Browser camera uploads can arrive as application/octet-stream even when
+    # they are valid images. Allow those when the filename extension is known.
+    if normalized_content_type == "image/jpg":
+        normalized_content_type = "image/jpeg"
+
+    is_valid_type = normalized_content_type in ALLOWED_IMAGE_TYPES
+    is_octet_stream_image = (
+        normalized_content_type == "application/octet-stream" and extension_allowed
+    )
+
+    if not is_valid_type and not is_octet_stream_image and not (not normalized_content_type and extension_allowed):
+        return {
+            "error": "Invalid file type. Use JPEG, PNG or WebP.",
+            "received_content_type": raw_content_type or None,
+            "filename": file.filename,
+        }, 400
 
     # Save with a random name to avoid collisions / path traversal
     filename = f"{uuid.uuid4().hex}.jpg"
@@ -394,8 +440,20 @@ def scan_plate():
     return result
 
 
-@entry_bp.route("/api/assistant-chat", methods=["POST"])
+@entry_bp.route("/scan-plate", methods=["POST"])
 @login_required
+def scan_plate():
+    return _scan_plate_impl()
+
+
+@entry_bp.route("/api/detect-plate", methods=["POST"])
+@api_login_required
+def detect_plate_api():
+    return _scan_plate_impl()
+
+
+@entry_bp.route("/api/assistant-chat", methods=["POST"])
+@api_login_required
 def assistant_chat():
     """Chat endpoint for follow-up driver questions after a plate scan."""
     payload = request.get_json(silent=True) or {}
