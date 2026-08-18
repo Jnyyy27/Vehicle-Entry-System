@@ -8,6 +8,7 @@ import os
 import logging
 import uuid
 import re
+import json
 
 import boto3
 from botocore.exceptions import ClientError
@@ -65,9 +66,74 @@ ORDER_KEYWORDS = {
     "meal": "combo meal",
 }
 
+CHECKOUT_EXACT_MESSAGES = {
+    "that is all",
+    "thats all",
+    "that's all",
+    "nothing",
+    "nothing else",
+    "no",
+    "no more",
+    "no thanks",
+    "nope",
+    "nah",
+    "that will be all",
+    "i'm done",
+    "im done",
+    "done",
+    "checkout",
+    "pay",
+    "finish",
+    "finished",
+}
+
+CHECKOUT_PATTERN = re.compile(
+    r"\b(?:that(?:'s| is| will be)? all|nothing else|no more|i(?:'m|m) done)\b"
+)
+
 
 def _normalize_message(text):
     return re.sub(r"\s+", " ", (text or "").strip().lower())
+
+
+def is_checkout_message(text):
+    cleaned = _normalize_message(text)
+    if not cleaned:
+        return False
+    return cleaned in CHECKOUT_EXACT_MESSAGES or bool(CHECKOUT_PATTERN.search(cleaned))
+
+
+def is_recommendation_request(text):
+    cleaned = _normalize_message(text)
+    if not cleaned:
+        return False
+
+    recommendation_phrases = (
+        "what do you recommend",
+        "what would you recommend",
+        "recommend",
+        "suggest",
+        "popular",
+        "best",
+        "what should i get",
+        "what should i order",
+        "which one should i get",
+        "which one do you recommend",
+        "if i like",
+        "if i want",
+        "i feel like",
+        "i'm feeling like",
+        "im feeling like",
+        "what is good",
+        "any suggestion",
+    )
+
+    if any(phrase in cleaned for phrase in recommendation_phrases):
+        return True
+
+    preference_words = {"spicy", "beef", "chicken", "fish", "vegetarian", "veggie", "sweet", "salty", "crispy", "classic", "healthy", "light"}
+    question_words = {"what", "which", "who", "how", "best", "good", "recommend", "suggest"}
+    return "?" in cleaned and bool(set(cleaned.split()) & question_words) and bool(set(cleaned.split()) & preference_words)
 
 
 def _extract_order_items(messages):
@@ -80,6 +146,19 @@ def _extract_order_items(messages):
                 found.append(label)
                 seen.add(label)
     return found
+
+
+def _menu_names_by_category(menu_items):
+    grouped = {}
+    for item in menu_items or []:
+        if not item or not item.get("available"):
+            continue
+        category = str(item.get("category") or "Other").strip()
+        name = str(item.get("name") or "").strip()
+        if not name:
+            continue
+        grouped.setdefault(category, []).append(name)
+    return grouped
 
 
 def generate_local_order_reply(user_message, history, menu_items=None):
@@ -118,8 +197,17 @@ def generate_local_order_reply(user_message, history, menu_items=None):
 
     # --- Menu hint string -----------------------------------------------------
     if menu_items:
-        avail_names = [mi["name"] for mi in menu_items if mi.get("available")]
-        menu_hint = ", ".join(avail_names[:4]) + (" and more" if len(avail_names) > 4 else "")
+        by_category = _menu_names_by_category(menu_items)
+        category_parts = []
+        for category in ("Burger", "Side", "Drink", "Combo"):
+            names = by_category.get(category) or []
+            if names:
+                category_parts.append(f"{category}s")
+        if category_parts:
+            menu_hint = ", ".join(category_parts)
+        else:
+            avail_names = [mi["name"] for mi in menu_items if mi.get("available")]
+            menu_hint = ", ".join(avail_names[:4]) + (" and more" if len(avail_names) > 4 else "")
     else:
         menu_hint = "burgers and sides"
 
@@ -166,6 +254,42 @@ def generate_local_order_reply(user_message, history, menu_items=None):
                         "Which one would you like?"
                     )
 
+            if any(w in cleaned for w in ["side", "sides", "fries", "nuggets", "rings"]):
+                side_picks = [
+                    mi for mi in menu_items
+                    if mi.get("available") and str(mi.get("category") or "").lower() == "side"
+                ]
+                if side_picks:
+                    picks = side_picks[:3]
+                    pick_str = ", ".join(
+                        f"{mi['name']} RM{prices[mi['name']]:.2f}" for mi in picks
+                    )
+                    return f"For sides I recommend {pick_str}. Which one would you like?"
+
+            if any(w in cleaned for w in ["drink", "drinks", "coffee", "tea", "coke", "sprite", "water", "latte", "americano", "milkshake"]):
+                drink_picks = [
+                    mi for mi in menu_items
+                    if mi.get("available") and str(mi.get("category") or "").lower() == "drink"
+                ]
+                if drink_picks:
+                    picks = drink_picks[:3]
+                    pick_str = ", ".join(
+                        f"{mi['name']} RM{prices[mi['name']]:.2f}" for mi in picks
+                    )
+                    return f"For drinks I recommend {pick_str}. What sounds good?"
+
+            if any(w in cleaned for w in ["combo", "set", "meal"]):
+                combo_picks = [
+                    mi for mi in menu_items
+                    if mi.get("available") and str(mi.get("category") or "").lower() == "combo"
+                ]
+                if combo_picks:
+                    picks = combo_picks[:3]
+                    pick_str = ", ".join(
+                        f"{mi['name']} RM{prices[mi['name']]:.2f}" for mi in picks
+                    )
+                    return f"For combo sets I recommend {pick_str}. Which combo do you want?"
+
             if any(w in cleaned for w in ["vegetarian", "veggie", "vegan", "no meat"]):
                 match = next((mi for mi in menu_items if mi.get("available") and "veggie" in mi["name"].lower()), None)
                 if match:
@@ -195,10 +319,7 @@ def generate_local_order_reply(user_message, history, menu_items=None):
         return "No problem. Tell me what you would like to order."
 
     # Checkout
-    checkout_phrases = ["that is all", "thats all", "that's all", "nothing else",
-                        "no more", "that will be all", "i'm done", "im done", "no thanks"]
-    checkout_words = {"done", "checkout", "pay", "finish", "finished"}
-    if any(p in cleaned for p in checkout_phrases) or (cleaned_words & checkout_words):
+    if is_checkout_message(cleaned):
         if items:
             summary = ", ".join(
                 f"{name} RM{prices[name]:.2f}" if name in prices else name
@@ -373,6 +494,190 @@ def call_ollama_text(prompt, temperature=0.3, timeout=20, stop=None):
         return None
 
 
+def call_ollama_json(prompt, temperature=0.1, timeout=20):
+    """Return parsed JSON from Ollama generate API, or None on failure."""
+    text = call_ollama_text(prompt, temperature=temperature, timeout=timeout)
+    if not text:
+        return None
+
+    cleaned = text.strip()
+    if cleaned.startswith("```"):
+        cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r"\s*```$", "", cleaned)
+
+    start = cleaned.find("{")
+    end = cleaned.rfind("}")
+    if start != -1 and end != -1 and end > start:
+        cleaned = cleaned[start:end + 1]
+
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError:
+        logger.debug("Ollama JSON parse failed: %s", cleaned, exc_info=True)
+        return None
+
+
+def infer_order_action_with_ai(user_message, history, menu_items):
+    """Use Ollama to infer the user's intended ordering action from chat context."""
+    if not user_message:
+        return None
+
+    menu_lines = []
+    for item in menu_items or []:
+        name = str(item.get("name") or "").strip()
+        if not name:
+            continue
+        price = float(item.get("price") or 0)
+        available = bool(item.get("available", True))
+        menu_lines.append(
+            f"- {name} | RM{price:.2f} | {'available' if available else 'sold_out'}"
+        )
+
+    history_lines = []
+    for turn in (history or [])[-8:]:
+        role = str(turn.get("role") or "").strip().lower()
+        content = str(turn.get("content") or "").strip()
+        if role in {"user", "assistant"} and content:
+            speaker = "Driver" if role == "user" else "Assistant"
+            history_lines.append(f"{speaker}: {content[:400]}")
+
+    prompt = (
+        "You are an order parser for a drive-thru chatbot. "
+        "Convert the driver's latest message into a single JSON object only. "
+        "Use the conversation history and menu to infer what they mean, even for short replies like 'one', 'yes', 'that one', or 'give me the same'. "
+        "Match items only to the provided menu. If the message is too vague to identify a specific item, set needs_clarification true. "
+        "If the driver is finishing their order, set checkout true. "
+        "Return JSON with exactly these keys: intent, checkout, needs_clarification, items. "
+        "intent must be one of: add_item, modify_order, checkout, question, greeting, unknown. "
+        "items must be an array of objects with name and quantity. Quantity must be an integer >= 1. "
+        "Do not include markdown, code fences, or extra text.\n\n"
+        "Menu:\n"
+        + ("\n".join(menu_lines) if menu_lines else "(no menu provided)")
+        + "\n\nConversation:\n"
+        + ("\n".join(history_lines) if history_lines else "No prior conversation.")
+        + "\nDriver: "
+        + str(user_message).strip()
+        + "\nJSON:"
+    )
+
+    data = call_ollama_json(prompt, temperature=0.05)
+    if not isinstance(data, dict):
+        return None
+
+    intent = str(data.get("intent") or "unknown").strip().lower()
+    checkout = bool(data.get("checkout"))
+    needs_clarification = bool(data.get("needs_clarification"))
+
+    items = []
+    for item in data.get("items") or []:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("name") or "").strip()
+        quantity = item.get("quantity")
+        if not name:
+            continue
+        try:
+            quantity = max(1, min(int(quantity), 20))
+        except (TypeError, ValueError):
+            quantity = 1
+        items.append({"name": name, "quantity": quantity})
+
+    return {
+        "intent": intent,
+        "checkout": checkout,
+        "needs_clarification": needs_clarification,
+        "items": items,
+    }
+
+
+def infer_menu_correction_with_ai(user_message, history, menu_items):
+    """Use Ollama to suggest likely menu items for unclear/mispronounced requests."""
+    if not user_message or not menu_items:
+        return None
+
+    menu_lines = []
+    for item in menu_items:
+        name = str(item.get("name") or "").strip()
+        if not name:
+            continue
+        price = float(item.get("price") or 0)
+        category = str(item.get("category") or "").strip() or "Other"
+        menu_lines.append(f"- {name} | {category} | RM{price:.2f}")
+
+    if not menu_lines:
+        return None
+
+    history_lines = []
+    for turn in (history or [])[-8:]:
+        role = str(turn.get("role") or "").strip().lower()
+        content = str(turn.get("content") or "").strip()
+        if role in {"user", "assistant"} and content:
+            speaker = "Driver" if role == "user" else "Assistant"
+            history_lines.append(f"{speaker}: {content[:300]}")
+
+    prompt = (
+        "You map unclear drive-thru requests to likely menu items. "
+        "Given the latest driver message, return likely intended menu item names from the provided menu only. "
+        "This includes handling mispronunciations and spelling mistakes. "
+        "Return JSON with exactly these keys: understood, confidence, suggestions. "
+        "understood must be true only when you can confidently infer intended item(s). "
+        "confidence must be a number 0.0 to 1.0 for the top suggestion. "
+        "suggestions must be an array of up to 3 exact menu names, most likely first. "
+        "No markdown, no extra keys, no extra text.\n\n"
+        "Menu:\n"
+        + "\n".join(menu_lines)
+        + "\n\nConversation:\n"
+        + ("\n".join(history_lines) if history_lines else "No prior conversation.")
+        + "\nDriver: "
+        + str(user_message).strip()
+        + "\nJSON:"
+    )
+
+    data = call_ollama_json(prompt, temperature=0.05)
+    if not isinstance(data, dict):
+        return None
+
+    understood = bool(data.get("understood"))
+    try:
+        confidence = float(data.get("confidence") or 0)
+    except (TypeError, ValueError):
+        confidence = 0.0
+    confidence = max(0.0, min(confidence, 1.0))
+
+    raw_suggestions = data.get("suggestions") or []
+    if not isinstance(raw_suggestions, list):
+        raw_suggestions = []
+
+    menu_names = {
+        str(item.get("name") or "").strip().lower(): str(item.get("name") or "").strip()
+        for item in menu_items
+        if str(item.get("name") or "").strip()
+    }
+
+    suggestions = []
+    seen = set()
+    for name in raw_suggestions:
+        key = str(name or "").strip().lower()
+        canonical = menu_names.get(key)
+        if not canonical:
+            continue
+        if canonical.lower() in seen:
+            continue
+        seen.add(canonical.lower())
+        suggestions.append(canonical)
+        if len(suggestions) >= 3:
+            break
+
+    if not suggestions:
+        return None
+
+    return {
+        "understood": understood,
+        "confidence": confidence,
+        "suggestions": suggestions,
+    }
+
+
 def _get_current_order_summary(plate_number):
     """
     Return the confirmed order lines for this plate as a plain-text string,
@@ -419,9 +724,171 @@ def _get_current_order_summary(plate_number):
         return ""
 
 
+def _category_recommendations(menu_items, category, limit=2):
+    picks = []
+    for item in menu_items or []:
+        if not item or not item.get("available"):
+            continue
+        if str(item.get("category") or "").strip().lower() != category:
+            continue
+        name = str(item.get("name") or "").strip()
+        if not name:
+            continue
+        price = float(item.get("price") or 0)
+        picks.append(f"{name} RM{price:.2f}")
+        if len(picks) >= limit:
+            break
+    return picks
+
+
+def _recommendation_reply_for_side_drink(cleaned_message, menu_items):
+    if not menu_items:
+        return None
+
+    lowered = _normalize_message(cleaned_message)
+    asks_side = any(
+        key in lowered for key in ["side", "sides", "fries", "nuggets", "rings", "site"]
+    )
+    asks_drink = any(
+        key in lowered
+        for key in [
+            "drink",
+            "drinks",
+            "coke",
+            "sprite",
+            "water",
+            "coffee",
+            "tea",
+            "latte",
+            "americano",
+            "milkshake",
+        ]
+    )
+
+    if not asks_side and not asks_drink:
+        return None
+
+    side_picks = _category_recommendations(menu_items, "side") if asks_side else []
+    drink_picks = _category_recommendations(menu_items, "drink") if asks_drink else []
+
+    if side_picks and drink_picks:
+        return (
+            f"For sides I recommend {', '.join(side_picks)}. "
+            f"For drinks I recommend {', '.join(drink_picks)}."
+        )
+    if side_picks:
+        return f"For sides I recommend {', '.join(side_picks)}. Which side would you like?"
+    if drink_picks:
+        return f"For drinks I recommend {', '.join(drink_picks)}. What sounds good?"
+    return None
+
+
+def _post_add_upsell_reply(items_just_added, order_category_flags, menu_items):
+    added_categories = {
+        str(item.get("category") or "").strip().lower()
+        for item in (items_just_added or [])
+        if str(item.get("category") or "").strip()
+    }
+    if "combo" in added_categories:
+        return "Would you like anything else?"
+    if "burger" not in added_categories:
+        return "Would you like anything else?"
+
+    flags = order_category_flags or {}
+    has_side = bool(flags.get("has_side"))
+    has_drink = bool(flags.get("has_drink"))
+    has_combo = bool(flags.get("has_combo"))
+    if has_combo or (has_side and has_drink):
+        return "Would you like anything else?"
+
+    side_picks = _category_recommendations(menu_items, "side", limit=2)
+    drink_picks = _category_recommendations(menu_items, "drink", limit=2)
+
+    if not has_side and not has_drink and side_picks and drink_picks:
+        return (
+            f"Would you like to add a side and a drink? "
+            f"Popular picks are {', '.join(side_picks)} and {', '.join(drink_picks)}."
+        )
+    if not has_side and side_picks:
+        return f"Would you like to add a side as well? Popular picks are {', '.join(side_picks)}."
+    if not has_drink and drink_picks:
+        return f"Would you like to add a drink as well? Popular picks are {', '.join(drink_picks)}."
+    return "Would you like anything else?"
+
+
+def _post_modify_reply(order_action, items_removed, items_updated):
+    if order_action == "remove":
+        if not items_removed:
+            return "I could not find that item in your current order. What would you like to change?"
+        parts = [
+            f"removed {int(it['quantity'])}x {it['name']}"
+            for it in items_removed
+        ]
+        return ", ".join(parts).capitalize() + ". What would you like next?"
+
+    if order_action == "set":
+        if not items_updated:
+            return "I could not update that item yet. Tell me the exact quantity you want."
+        parts = []
+        for it in items_updated:
+            quantity = int(it.get("quantity") or 0)
+            if quantity <= 0:
+                parts.append(f"removed {it['name']}")
+            else:
+                parts.append(f"updated {it['name']} to {quantity}")
+        return ", ".join(parts).capitalize() + ". Anything else?"
+
+    return None
+
+
+def _naturalize_order_reply(event_type, facts_text, fallback, user_message="", history=None):
+    """Let the model phrase deterministic order facts more naturally without changing them."""
+    if not facts_text:
+        return fallback
+
+    history_lines = []
+    for turn in (history or [])[-4:]:
+        role = str(turn.get("role") or "").strip().lower()
+        content = str(turn.get("content") or "").strip()
+        if role in {"user", "assistant"} and content:
+            speaker = "Driver" if role == "user" else "Assistant"
+            history_lines.append(f"{speaker}: {content[:200]}")
+
+    prompt = (
+        "You are a natural drive-thru AI assistant for Speed Burger. "
+        "Write one short, warm, natural-sounding reply. "
+        "Do not sound scripted. Do not add facts not provided. "
+        "Keep all order facts exactly as written in the FACTS line, including quantities, item names, and prices. "
+        "You may only wrap those facts in more natural conversational wording. "
+        "Use at most 2 short sentences. No markdown.\n\n"
+        f"Event: {event_type}\n"
+        f"Latest driver message: {str(user_message or '').strip()}\n"
+        + (
+            "Conversation:\n" + "\n".join(history_lines) + "\n"
+            if history_lines
+            else "Conversation: No prior exchanges.\n"
+        )
+        + f"FACTS: {facts_text}\n"
+        f"Fallback intent: {fallback}\n"
+        "Assistant:"
+    )
+
+    phrased = call_ollama_text(
+        prompt,
+        temperature=0.45,
+        stop=["Driver:", "\nDriver", "User:"],
+    )
+    return phrased or fallback
+
+
 def generate_vehicle_chat_reply(plate_number, user_message, history, direction="", menu_items=None,
-                                items_just_added=None, checkout_requested=False, checkout_order_lines=None,
-                                order_not_found=False):
+                                items_just_added=None, items_removed=None,
+                                items_updated=None, order_action="add", order_category_flags=None,
+                                checkout_requested=False, checkout_order_lines=None,
+                                checkout_confirmation_required=False,
+                                order_not_found=False, needs_clarification=False,
+                                clarification_suggestions=None, clarification_quantity=1,
+                                clarification_reason="", clarification_target=""):
     """
     Generate a drive-thru ordering reply.
     - Item confirmations and checkout summaries are built deterministically (no LLM).
@@ -471,7 +938,57 @@ def generate_vehicle_chat_reply(plate_number, user_message, history, direction="
             f"{int(it['quantity'])}x {it['name']} RM{float(it['unit_price']):.2f}"
             for it in items_just_added
         ]
-        return ", ".join(parts) + ". Would you like anything else?"
+        upsell = _post_add_upsell_reply(items_just_added, order_category_flags, menu_items)
+        facts = ", ".join(parts)
+        fallback = facts + f". {upsell}"
+        return _naturalize_order_reply(
+            event_type="item_added",
+            facts_text=facts,
+            fallback=fallback,
+            user_message=cleaned_message,
+            history=safe_history,
+        )
+
+    modification_reply = _post_modify_reply(order_action, items_removed, items_updated)
+    if modification_reply and not checkout_requested:
+        facts_parts = []
+        for it in items_removed or []:
+            facts_parts.append(f"removed {int(it['quantity'])}x {it['name']}")
+        for it in items_updated or []:
+            quantity = int(it.get("quantity") or 0)
+            if quantity <= 0:
+                facts_parts.append(f"removed {it['name']}")
+            else:
+                facts_parts.append(f"updated {it['name']} to {quantity}")
+        return _naturalize_order_reply(
+            event_type="order_modified",
+            facts_text=", ".join(facts_parts),
+            fallback=modification_reply,
+            user_message=cleaned_message,
+            history=safe_history,
+        )
+
+    if checkout_confirmation_required:
+        lines = checkout_order_lines or []
+        if lines:
+            parts = [
+                f"{int(row['quantity'])}x {row['name']} RM{float(row['unit_price']):.2f}"
+                for row in lines
+            ]
+            facts = ", ".join(parts)
+            fallback = (
+                "Please confirm your order: "
+                + facts
+                + ". Reply yes to confirm, or tell me what to change."
+            )
+            return _naturalize_order_reply(
+                event_type="checkout_preview",
+                facts_text=facts,
+                fallback=fallback,
+                user_message=cleaned_message,
+                history=safe_history,
+            )
+        return "Please confirm your order by replying yes, or tell me what to change."
 
     # ------------------------------------------------------------------ #
     # DETERMINISTIC PATH 2: checkout summary                             #
@@ -484,13 +1001,59 @@ def generate_vehicle_chat_reply(plate_number, user_message, history, direction="
                 f"{int(row['quantity'])}x {row['name']} RM{float(row['unit_price']):.2f}"
                 for row in lines
             ]
-            return "Your order: " + ", ".join(parts) + ". Thank you for choosing Speed Burger!"
+            facts = ", ".join(parts)
+            fallback = "Your order: " + facts + ". Thank you for choosing Speed Burger!"
+            return _naturalize_order_reply(
+                event_type="checkout_confirmed",
+                facts_text=facts,
+                fallback=fallback,
+                user_message=cleaned_message,
+                history=safe_history,
+            )
         return "Thank you for choosing Speed Burger! Have a great day."
 
     # ------------------------------------------------------------------ #
     # DETERMINISTIC PATH 3: item not found on menu                       #
     # Prevents Ollama from faking an order confirmation.                 #
     # ------------------------------------------------------------------ #
+    if needs_clarification:
+        suggestions = clarification_suggestions or []
+        if suggestions:
+            names = [str(item.get("name") or "").strip() for item in suggestions]
+            names = [name for name in names if name]
+            quantity = max(1, int(clarification_quantity or 1))
+            if names:
+                if clarification_reason == "unknown_combo":
+                    combo_label = (clarification_target or "that combo").strip()
+                    return (
+                        f"We do not have {combo_label}. "
+                        f"We have {', '.join(names)}. Which one would you like?"
+                    )
+
+                if len(names) == 1:
+                    return (
+                        f"Did you mean {quantity}x {names[0]}? "
+                        "Please reply yes to confirm, or tell me the exact item name."
+                    )
+
+                top = names[0]
+                alternatives = ", ".join(names[1:3])
+                if alternatives:
+                    return (
+                        f"Did you mean {quantity}x {top}? "
+                        f"If not, choose one: {alternatives}."
+                    )
+                return (
+                    f"Did you mean {quantity}x {top}? "
+                    "Please reply yes to confirm, or tell me the exact item name."
+                )
+
+        if menu_items:
+            avail = [mi["name"] for mi in menu_items if mi.get("available")]
+            hint = ", ".join(avail[:3]) + (" and more" if len(avail) > 3 else "")
+            return f"Which item would you like one of? We currently have {hint}."
+        return "Which item would you like one of?"
+
     if order_not_found:
         if menu_items:
             avail = [mi["name"] for mi in menu_items if mi.get("available")]
@@ -502,10 +1065,16 @@ def generate_vehicle_chat_reply(plate_number, user_message, history, direction="
     # OLLAMA PATH: Q&A turns (greetings, recommendations, queries)       #
     # ------------------------------------------------------------------ #
 
+    recommendation_request = is_recommendation_request(cleaned_message)
+
+    recommendation_reply = _recommendation_reply_for_side_drink(cleaned_message, menu_items)
+    if recommendation_reply:
+        return recommendation_reply
+
     # Build menu block for the prompt
     if menu_items:
         menu_lines = [
-            f"- {mi['name']} RM{float(mi['price']):.2f}{' [SOLD OUT]' if not mi.get('available') else ''}"
+            f"- {mi['name']} RM{float(mi['price']):.2f}{' [SOLD OUT]' if not mi.get('available') else ''}{(' - ' + str(mi.get('description')).strip()) if mi.get('description') else ''}"
             for mi in menu_items
         ]
         menu_block = "Speed Burger menu (name and unit price):\n" + "\n".join(menu_lines)
@@ -520,14 +1089,14 @@ def generate_vehicle_chat_reply(plate_number, user_message, history, direction="
     )
 
     prompt = (
-        "You are a Speed Burger drive-thru order-taking assistant. "
-        "Your ONLY job is to answer the driver's question or make a recommendation.\n"
-        "RULES:\n"
-        "1. Do NOT take orders or confirm quantities in this reply — order saving is handled separately.\n"
-        "2. For menu/recommendation questions, suggest 1-2 items by name and unit price.\n"
-        "3. For signature/classic queries, recommend Speed Classic Burger with a brief description.\n"
-        "4. Only recommend items on the menu. If not listed, apologise and suggest the closest match.\n"
-        "5. Reply in 1-2 short sentences. No markdown, no emojis, no plate numbers.\n\n"
+        "You are a natural drive-thru assistant for Speed Burger. Sound human, helpful, and concise. "
+        "Do not sound templated. Vary your wording. Avoid repeating the user's exact phrasing.\n"
+        "Guidelines:\n"
+        "- Do not take or confirm an order in this reply unless the driver clearly placed an order.\n"
+        "- If the driver asks for a recommendation or describes a taste preference, choose the best-fitting menu item(s) and explain briefly why.\n"
+        "- If the driver asks about a signature or classic item, recommend Speed Classic Burger naturally.\n"
+        "- If the driver is vague, ask one short clarifying question instead of saying the item is not on the menu.\n"
+        "- Use at most 2 short sentences. No markdown, no bullets, no plate numbers.\n\n"
         f"{menu_block}\n\n"
         f"{order_context}\n\n"
         "Conversation so far:\n"
@@ -536,7 +1105,8 @@ def generate_vehicle_chat_reply(plate_number, user_message, history, direction="
         "Assistant:"
     )
 
-    model_reply = call_ollama_text(prompt, temperature=0.15, stop=["Driver:", "\nDriver", "User:"])
+    temperature = 0.35 if recommendation_request else 0.25
+    model_reply = call_ollama_text(prompt, temperature=temperature, stop=["Driver:", "\nDriver", "User:"])
     if model_reply:
         return model_reply
     return generate_local_order_reply(cleaned_message, safe_history, menu_items)
