@@ -73,6 +73,11 @@ CHECKOUT_EXACT_MESSAGES = {
     "nothing",
     "nothing else",
     "no",
+    "no no",
+    "no la",
+    "no lah",
+    "no need",
+    "no thank you",
     "no more",
     "no thanks",
     "nope",
@@ -81,6 +86,13 @@ CHECKOUT_EXACT_MESSAGES = {
     "i'm done",
     "im done",
     "done",
+    "i'm good",
+    "im good",
+    "all good",
+    "that's enough",
+    "thats enough",
+    "that's it",
+    "thats it",
     "checkout",
     "pay",
     "finish",
@@ -841,7 +853,15 @@ def _post_modify_reply(order_action, items_removed, items_updated):
     return None
 
 
-def _naturalize_order_reply(event_type, facts_text, fallback, user_message="", history=None):
+_NATURALIZE_EVENT_DESCRIPTIONS = {
+    "item_added": "The customer just added items — confirm what was added",
+    "checkout_preview": "The customer is done ordering — read back their full order and ask them to confirm before sending to kitchen",
+    "checkout_confirmed": "The customer confirmed their order — thank them and let them know it is being prepared",
+    "order_modified": "The customer changed or removed items — confirm what changed",
+}
+
+
+def _naturalize_order_reply(event_type, facts_text, fallback, user_message="", history=None, extra_context=""):
     """Let the model phrase deterministic order facts more naturally without changing them."""
     if not facts_text:
         return fallback
@@ -851,32 +871,32 @@ def _naturalize_order_reply(event_type, facts_text, fallback, user_message="", h
         role = str(turn.get("role") or "").strip().lower()
         content = str(turn.get("content") or "").strip()
         if role in {"user", "assistant"} and content:
-            speaker = "Driver" if role == "user" else "Assistant"
+            speaker = "Customer" if role == "user" else "You"
             history_lines.append(f"{speaker}: {content[:200]}")
 
+    event_desc = _NATURALIZE_EVENT_DESCRIPTIONS.get(event_type, event_type.replace("_", " "))
+
     prompt = (
-        "You are a natural drive-thru AI assistant for Speed Burger. "
-        "Write one short, warm, natural-sounding reply. "
-        "Do not sound scripted. Do not add facts not provided. "
-        "Keep all order facts exactly as written in the FACTS line, including quantities, item names, and prices. "
-        "You may only wrap those facts in more natural conversational wording. "
-        "Use at most 2 short sentences. No markdown.\n\n"
-        f"Event: {event_type}\n"
-        f"Latest driver message: {str(user_message or '').strip()}\n"
-        + (
-            "Conversation:\n" + "\n".join(history_lines) + "\n"
-            if history_lines
-            else "Conversation: No prior exchanges.\n"
-        )
-        + f"FACTS: {facts_text}\n"
-        f"Fallback intent: {fallback}\n"
-        "Assistant:"
+        "You are a warm, natural-sounding AI assistant working the drive-thru at Speed Burger. "
+        "You sound like a real person — varied, friendly, never robotic or scripted.\n\n"
+        f"Situation: {event_desc}\n"
+        f"Order facts (reproduce these exactly — never change item names, quantities, or prices): {facts_text}\n"
+        + (f"Upsell or context hint: {extra_context}\n" if extra_context else "")
+        + ("Recent conversation:\n" + "\n".join(history_lines) + "\n" if history_lines else "")
+        + f"Customer said: {user_message}\n"
+        "Write a single natural reply that:\n"
+        "  - Includes the exact order facts above\n"
+        "  - Varies your opener — never use the same greeting twice (avoid always starting with 'Got it' or 'Perfect')\n"
+        "  - Sounds like a human drive-thru cashier, not a bot\n"
+        "  - Is at most 2 short sentences\n"
+        "  - Uses no markdown or bullet points\n"
+        "Reply:"
     )
 
     phrased = call_ollama_text(
         prompt,
-        temperature=0.45,
-        stop=["Driver:", "\nDriver", "User:"],
+        temperature=0.55,
+        stop=["Customer:", "\nCustomer", "Driver:", "\n\n"],
     )
     return phrased or fallback
 
@@ -940,13 +960,15 @@ def generate_vehicle_chat_reply(plate_number, user_message, history, direction="
         ]
         upsell = _post_add_upsell_reply(items_just_added, order_category_flags, menu_items)
         facts = ", ".join(parts)
-        fallback = facts + f". {upsell}"
+        # Pass the upsell as natural language context so the AI decides how to phrase it
+        upsell_hint = upsell if upsell != "Would you like anything else?" else ""
         return _naturalize_order_reply(
             event_type="item_added",
             facts_text=facts,
-            fallback=fallback,
+            fallback=facts + f". {upsell}",
             user_message=cleaned_message,
             history=safe_history,
+            extra_context=upsell_hint,
         )
 
     modification_reply = _post_modify_reply(order_action, items_removed, items_updated)
@@ -975,11 +997,12 @@ def generate_vehicle_chat_reply(plate_number, user_message, history, direction="
                 f"{int(row['quantity'])}x {row['name']} RM{float(row['unit_price']):.2f}"
                 for row in lines
             ]
+            total = sum(float(r.get("unit_price", 0)) * int(r.get("quantity", 1)) for r in lines)
             facts = ", ".join(parts)
             fallback = (
                 "Please confirm your order: "
                 + facts
-                + ". Reply yes to confirm, or tell me what to change."
+                + f" — Total RM{total:.2f}. Reply yes to confirm, or tell me what to change."
             )
             return _naturalize_order_reply(
                 event_type="checkout_preview",
@@ -987,6 +1010,7 @@ def generate_vehicle_chat_reply(plate_number, user_message, history, direction="
                 fallback=fallback,
                 user_message=cleaned_message,
                 history=safe_history,
+                extra_context=f"Total comes to RM{total:.2f}.",
             )
         return "Please confirm your order by replying yes, or tell me what to change."
 
@@ -1001,14 +1025,16 @@ def generate_vehicle_chat_reply(plate_number, user_message, history, direction="
                 f"{int(row['quantity'])}x {row['name']} RM{float(row['unit_price']):.2f}"
                 for row in lines
             ]
+            total = sum(float(r.get("unit_price", 0)) * int(r.get("quantity", 1)) for r in lines)
             facts = ", ".join(parts)
-            fallback = "Your order: " + facts + ". Thank you for choosing Speed Burger!"
+            fallback = "Your order: " + facts + f" — Total RM{total:.2f}. Thank you for choosing Speed Burger!"
             return _naturalize_order_reply(
                 event_type="checkout_confirmed",
                 facts_text=facts,
                 fallback=fallback,
                 user_message=cleaned_message,
                 history=safe_history,
+                extra_context=f"Total RM{total:.2f}.",
             )
         return "Thank you for choosing Speed Burger! Have a great day."
 
@@ -1062,51 +1088,51 @@ def generate_vehicle_chat_reply(plate_number, user_message, history, direction="
         return "Sorry, I don't have that item on our menu. What would you like to order?"
 
     # ------------------------------------------------------------------ #
-    # OLLAMA PATH: Q&A turns (greetings, recommendations, queries)       #
+    # OLLAMA PATH: greetings, recommendations, Q&A, anything unhandled   #
     # ------------------------------------------------------------------ #
 
     recommendation_request = is_recommendation_request(cleaned_message)
 
-    recommendation_reply = _recommendation_reply_for_side_drink(cleaned_message, menu_items)
-    if recommendation_reply:
-        return recommendation_reply
-
     # Build menu block for the prompt
     if menu_items:
         menu_lines = [
-            f"- {mi['name']} RM{float(mi['price']):.2f}{' [SOLD OUT]' if not mi.get('available') else ''}{(' - ' + str(mi.get('description')).strip()) if mi.get('description') else ''}"
+            f"- {mi['name']} RM{float(mi['price']):.2f}"
+            + (" [SOLD OUT]" if not mi.get("available") else "")
+            + ((" — " + str(mi.get("description") or "").strip()) if mi.get("description") else "")
             for mi in menu_items
         ]
-        menu_block = "Speed Burger menu (name and unit price):\n" + "\n".join(menu_lines)
+        menu_block = "Speed Burger menu:\n" + "\n".join(menu_lines)
     else:
         menu_block = "(menu not available)"
 
     confirmed_order = _get_current_order_summary(plate_number)
     order_context = (
-        f"Confirmed order so far: {confirmed_order}"
+        f"Customer's order so far: {confirmed_order}"
         if confirmed_order
-        else "Confirmed order so far: nothing ordered yet."
+        else "Customer's order so far: nothing ordered yet."
     )
 
     prompt = (
-        "You are a natural drive-thru assistant for Speed Burger. Sound human, helpful, and concise. "
-        "Do not sound templated. Vary your wording. Avoid repeating the user's exact phrasing.\n"
-        "Guidelines:\n"
-        "- Do not take or confirm an order in this reply unless the driver clearly placed an order.\n"
-        "- If the driver asks for a recommendation or describes a taste preference, choose the best-fitting menu item(s) and explain briefly why.\n"
-        "- If the driver asks about a signature or classic item, recommend Speed Classic Burger naturally.\n"
-        "- If the driver is vague, ask one short clarifying question instead of saying the item is not on the menu.\n"
-        "- Use at most 2 short sentences. No markdown, no bullets, no plate numbers.\n\n"
+        "You are an intelligent, friendly AI assistant running the drive-thru at Speed Burger. "
+        "You sound like a real person — natural, warm, varied. Never robotic or scripted.\n"
+        "Your job:\n"
+        "- Help customers decide what to order, give honest recommendations based on their preference\n"
+        "- If they mention a food preference (spicy, chicken, light, etc.), suggest the best match with a short reason\n"
+        "- If they ask about the menu, highlight 1-2 standout items naturally\n"
+        "- If their request is unclear, ask ONE short clarifying question\n"
+        "- Never confirm or add an order — that is handled separately\n"
+        "- Never invent items or prices not on the menu\n"
+        "- Max 2 sentences. No lists, no markdown, no bullet points.\n\n"
         f"{menu_block}\n\n"
         f"{order_context}\n\n"
-        "Conversation so far:\n"
-        f"{conversation if conversation else 'No prior exchanges.'}\n"
-        f"Driver: {cleaned_message}\n"
+        "Conversation:\n"
+        f"{conversation if conversation else 'Customer just pulled up.'}\n"
+        f"Customer: {cleaned_message}\n"
         "Assistant:"
     )
 
-    temperature = 0.35 if recommendation_request else 0.25
-    model_reply = call_ollama_text(prompt, temperature=temperature, stop=["Driver:", "\nDriver", "User:"])
+    temperature = 0.45 if recommendation_request else 0.3
+    model_reply = call_ollama_text(prompt, temperature=temperature, stop=["Customer:", "\nCustomer", "Driver:"])
     if model_reply:
         return model_reply
     return generate_local_order_reply(cleaned_message, safe_history, menu_items)

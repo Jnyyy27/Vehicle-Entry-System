@@ -550,6 +550,30 @@ def _infer_requested_menu_items_from_history(message, history, menu_rows):
     return []
 
 
+def _is_contextual_decline(message, history):
+    """True when the user declines after the assistant offered more items."""
+    cleaned = _normalize_text(message)
+    if not cleaned:
+        return False
+
+    neg_words = {"no", "nope", "nah", "not", "none", "nothing", "dont", "don't", "na"}
+    if not (set(cleaned.split()) & neg_words):
+        return False
+
+    for turn in reversed(history or []):
+        if str(turn.get("role") or "").strip().lower() != "assistant":
+            continue
+        content = _normalize_text(turn.get("content") or "")
+        if any(phrase in content for phrase in [
+            "anything else", "would you like", "what else", "like to add",
+            "else today", "add a side", "add a drink",
+        ]):
+            return True
+        return False
+
+    return False
+
+
 def _has_order_intent(message):
     """True when the message looks like an order attempt (quantity, order verbs, etc.)."""
     if not message:
@@ -575,6 +599,7 @@ def _persist_order_from_chat(plate_number, user_message, history=None):
     """
     checkout_requested = _is_checkout_message(user_message)
     checkout_confirmed = _is_checkout_confirmation_reply(user_message, history)
+    checkout_requested = checkout_requested or _is_contextual_decline(user_message, history)
 
     with get_cursor(dict_cursor=True, commit=True) as cursor:
         cursor.execute(
