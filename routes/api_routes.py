@@ -1,7 +1,7 @@
 import logging
-from flask import Blueprint, g, request
+from flask import Blueprint, g, request, jsonify
 
-from auth import api_login_required, api_admin_required
+from auth import api_login_required, api_admin_required, check_password, create_token
 from db import get_cursor
 from routes.menu_routes import get_menu_image_url
 
@@ -125,6 +125,35 @@ def _get_or_create_pending_order(cursor, plate_number):
     )
     order_id = int(cursor.lastrowid)
     return {"order_id": order_id, "status": "Pending", "total_amount": 0}, None
+
+
+@api_bp.route("/api/login", methods=["POST"])
+def api_login():
+    """
+    Authenticate with email + password, return a signed JWT.
+    Body: {"email": "...", "password": "..."}
+    Response: {"token": "...", "user": {"email": "...", "role": "..."}}
+    """
+    body = request.get_json(silent=True) or {}
+    email = (body.get("email") or "").strip().lower()
+    password = body.get("password") or ""
+
+    if not email or not password:
+        return jsonify({"error": "email and password are required"}), 400
+
+    with get_cursor(dict_cursor=True) as cursor:
+        cursor.execute(
+            "SELECT email, password_hash, role FROM users WHERE email = %s LIMIT 1",
+            (email,),
+        )
+        row = cursor.fetchone()
+
+    if not row or not check_password(password, row["password_hash"]):
+        return jsonify({"error": "invalid credentials"}), 401
+
+    user = {"email": row["email"], "role": row["role"]}
+    token = create_token(user)
+    return jsonify({"token": token, "user": user})
 
 
 @api_bp.route("/api/health", methods=["GET"])
